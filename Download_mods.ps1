@@ -21,34 +21,13 @@ if (Test-Path config.json) {
 else {
 	$config = @{}
 
-	$pcvr = $false
 	Write-Output "No configuration file found. Let's set up a new one."
-	Write-Output "Are you running BONELAB on Windows / Steam / PCVR? Type 'y' for yes or 'n' for no."
-	if (Confirm-User "Download mods for Windows?") {
-		$platf = "windows"
-		$dest = "$env:appdata\..\LocalLow\Stress Level Zero\BONELAB\Mods"
-		$pcvr = $true
-	}
-	else {
-		Write-Output "Are you running BONELAB on Quest 2?"
-		if (Confirm-User "Download mods for android/quest?") {
-			$platf = "android"
-			$dest = (Get-Location).Path + "\mods"
-		}
-	}
-	if ($null -eq $platf) {
-		Write-Output "Sorry, there are no other supported platforms :("
-		Pause
-		Exit
-	}
+	$dest = "C:\Program Files (x86)\Steam\steamapps\common\Ready Or Not\ReadyOrNot\Content\Paks\~mods"
 
 	$unpack = Confirm-User "Do you wish to automatically unpack or install downloaded/updated mods?"
 
 	if ($unpack) {
 		Write-Output "The default installation path is: $dest"
-		if ($pcvr) {
-			Write-Output "(this is the default location for your BONELAB mod folder)"
-		}
 
 		if (-not(Confirm-User "Install/unpack mods to that location?")) {
 			Write-Output "Enter the path to the desired location."
@@ -72,7 +51,6 @@ else {
 	Write-Output "Thank you, that should be everything I need."
 
 	$config.token = $tok
-	$config.platform = $platf
 	$config.unpack = $unpack
 	$config.destination = $dest
 
@@ -93,7 +71,7 @@ if (-not(Test-Path zips)) {
 }
 
 Write-Output "Checking subscriptions..."
-$sublist_json = Invoke-WebRequest -UseBasicParsing -URI https://api.mod.io/v1/me/subscribed?game_id=3809 -Method GET -Headers @{"Authorization" = "Bearer ${token}"; "Accept" = "application/json" }
+$sublist_json = Invoke-WebRequest -UseBasicParsing -URI https://api.mod.io/v1/me/subscribed?game_id=3791 -Method GET -Headers @{"Authorization" = "Bearer ${token}"; "Accept" = "application/json" }
 $sublist = ConvertFrom-Json $sublist_json.Content
 
 $len = $sublist.data.length
@@ -105,12 +83,8 @@ for ($i = 0; $i -lt $len; $i++) {
 	$subname = $sub.name
 	Write-Output "Requesting info about subscription $subname..."
 	[string]$modid = $sub.id
-	$mod_json = Invoke-WebRequest -UseBasicParsing -URI https://api.mod.io/v1/games/3809/mods/${modid}/files -Method GET -Headers @{"Authorization" = "Bearer ${token}"; "Accept" = "application/json" }
+	$mod_json = Invoke-WebRequest -UseBasicParsing -URI https://api.mod.io/v1/games/3791/mods/${modid}/files -Method GET -Headers @{"Authorization" = "Bearer ${token}"; "Accept" = "application/json" }
 	$mod = ConvertFrom-Json $mod_json.Content
-
-	# Filter mod files based on platform
-	$mod.data = @($mod.data)
-	$mod.data = $mod.data | Where-Object { $_.platforms.Where({ $_.platform -eq "windows" }, 'First').Count -gt 0 }
 
 	# get latest version in remaining files and keep only files matching that version
 	$mod.data = @($mod.data)
