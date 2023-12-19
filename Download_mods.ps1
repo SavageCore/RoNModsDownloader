@@ -1,3 +1,5 @@
+Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
+
 # Used to simplify y/n prompts further in the script
 function Confirm-User($msg, $default = 'Y') {
 	$choices = '&Yes', '&No'
@@ -21,6 +23,8 @@ function Confirm-User($msg, $default = 'Y') {
 
 if (Test-Path config.json) {
 	Write-Output "Reading settings from config.json."
+	Write-Output "If you wish to change these settings, delete the config file and run the script again."
+	Write-Output "" ""
 	$config = Get-Content config.json | ConvertFrom-Json
 }
 else {
@@ -87,7 +91,7 @@ for ($i = 0; $i -lt $len; $i++) {
 	$sub = $sublist.data[$i]
 	$subname = $sub.name
 	Write-Output ''
-	Write-Output "Requesting info about subscription $subname..."
+	Write-Output "Requesting info for '$subname'..."
 	[string]$modid = $sub.id
 	$mod_json = Invoke-WebRequest -UseBasicParsing -URI https://api.mod.io/v1/games/3791/mods/${modid}/files -Method GET -Headers @{"Authorization" = "Bearer ${token}"; "Accept" = "application/json" }
 	$mod = ConvertFrom-Json $mod_json.Content
@@ -97,7 +101,7 @@ for ($i = 0; $i -lt $len; $i++) {
 	$lastver = ($mod.data | Select-Object -ExpandProperty version | Measure-Object -Maximum).Maximum
 	$mod.data = $mod.data | Where-Object { $_.version -ge $lastver }
 	$mod.data = @($mod.data)
-	Write-Output "Latest version: $lastver"
+	Write-Output "  Latest version: $lastver"
 
 	# Write data about this sub to config
 	$name = $sub.name_id
@@ -105,22 +109,23 @@ for ($i = 0; $i -lt $len; $i++) {
 	$update = $true
 	if ($null -eq $config.${name}) {
 		$config | Add-Member -Name $name -Value @{} -MemberType NoteProperty
-		$config.${name}.date_updated = $sub.date_updated
+		$config.${name}.md5 = $mod.data.filehash.md5
 	}
-	elseif ($sub.date_updated -le $config.${name}.date_updated) {
-		$update = $false #already up to date
-		Write-Output "$subname seems to be up to date - checking for missing files..."
+	elseif ($mod.data.filehash.md5 -eq $config.${name}.md5) {
+		$update = $false # already up to date
+		Write-Output "  Subscription is up to date"
 	}
 
 	$datalen = $mod.data.length
 	[string]$datalen_str = $datalen
-	Write-Output "$subname contains $datalen_str file(s)."
+	$fileStr = if ($datalen_str -gt 1) { "files" } else { "file" }
+	Write-Output "  Subscription contains $datalen_str $fileStr."
 
 	for ($j = 0; $j -lt $datalen; $j++) {
 		$data = $mod.data[$j]
 		$file = $data.filename
 		if (-not(Test-Path zips/$file) -or $update) {
-			Write-Output "  Downloading $file..."
+			Write-Output "    Downloading $file..."
 			$url = $data.download.binary_url
 
 			# Suppress progress bar to vastly improve download speed
@@ -129,12 +134,41 @@ for ($i = 0; $i -lt $len; $i++) {
 
 			Invoke-WebRequest -UseBasicParsing -URI $url -OutFile zips/$file
 			if ($unpack) {
-				Write-Output "  Unpacking $file..."
-				Expand-Archive zips/$file -DestinationPath $destination -Force
+				$zip = [System.IO.Compression.ZipFile]::OpenRead("zips/$file")
+				$fileCount = $zip.Entries.Count
+				$fileStr = if ($fileCount -gt 1) { "files" } else { "file" }
+				Write-Output "    Extracting $fileCount $fileStr..."
+				Write-Output ""
+				foreach ($entry in $zip.Entries) {
+					$dst = [io.path]::combine($destination, $entry.FullName)
+
+					# If the file already exists, check if the hashes match
+					if ((Test-Path $dst)) {
+						# Generate md5 hash of the destination file
+						$dst_md5 = Get-FileHash $dst -Algorithm MD5 | Select-Object -ExpandProperty Hash
+
+						# Generate md5 hash of the file within the zip
+						$stream = $entry.Open()
+						$md5 = [System.Security.Cryptography.MD5]::Create()
+						$hash = $md5.ComputeHash($stream)
+						$zip_md5 = [BitConverter]::ToString($hash) -replace '-', ''
+						$stream.Close()
+
+						# If the hashes don't match, extract the file
+						if ($dst_md5 -eq $zip_md5) {
+							Write-Output $("      Skipped extract of {0} (files match)" -f @($entry.FullName))
+							continue
+						}
+					}
+
+					Write-Output $("      Extract ==> {0}" -f @($entry.FullName))
+					[System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $dst)
+				}
+				$zip.Dispose()
 			}
 		}
 		else {
-			Write-Output "  Skipped $file (already exists and up to date)."
+			Write-Output "    Skipped download of $file (already exists and up to date)."
 		}
 	}
 }
@@ -142,6 +176,7 @@ for ($i = 0; $i -lt $len; $i++) {
 # Write updates to the config file
 $config | ConvertTo-Json | Set-Content config.json
 
-Write-Output '' '' '' '' '' '' ''
-Write-Output "This seems to be everything :)"
+Write-Output '' ''
+Write-Output "All subscriptions downloaded and up to date."
+Write-Output '' ''
 Pause
