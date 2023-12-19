@@ -1,17 +1,22 @@
 # Used to simplify y/n prompts further in the script
-function Confirm-User {
-	param ([string]$msg)
-	do {
-		$yn = Read-Host "$msg [y/n]";
-		if ($yn -eq 'n') {
-			return $false
-		}
-		elseif ($yn -ne 'y') {
-			Write-Output "Enter y fer yes or n for no"
-		}
+function Confirm-User($msg, $default = 'Y') {
+	$choices = '&Yes', '&No'
+	if ($default -eq 'N') {
+		$choices = '&No', '&Yes'
 	}
-	while ($yn -ne "y")
-	return $true
+	$decision = $host.UI.PromptForChoice("", $msg, $choices, 0)
+	if ($decision -eq 0 -and $default -eq 'Y') {
+		return $true
+	}
+ elseif ($decision -eq 0 -and $default -eq 'N') {
+		return $false
+	}
+ elseif ($decision -eq 1 -and $default -eq 'Y') {
+		return $false
+	}
+ elseif ($decision -eq 1 -and $default -eq 'N') {
+		return $true
+	}
 }
 
 if (Test-Path config.json) {
@@ -81,6 +86,7 @@ Write-Output "Found $len_str subscription(s)."
 for ($i = 0; $i -lt $len; $i++) {
 	$sub = $sublist.data[$i]
 	$subname = $sub.name
+	Write-Output ''
 	Write-Output "Requesting info about subscription $subname..."
 	[string]$modid = $sub.id
 	$mod_json = Invoke-WebRequest -UseBasicParsing -URI https://api.mod.io/v1/games/3791/mods/${modid}/files -Method GET -Headers @{"Authorization" = "Bearer ${token}"; "Accept" = "application/json" }
