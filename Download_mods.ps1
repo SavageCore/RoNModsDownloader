@@ -142,6 +142,11 @@ for ($i = 0; $i -lt $len; $i++) {
 		if (-not(Test-Path zips/$file) -or $update) {
 			Write-Output "  Downloading $file..."
 			$url = $data.download.binary_url
+
+			# Suppress progress bar to vastly improve download speed
+			# https://stackoverflow.com/questions/28682642/powershell-why-is-using-invoke-webrequest-much-slower-than-a-browser-download
+			$ProgressPreference = 'SilentlyContinue'
+
 			Invoke-WebRequest -UseBasicParsing -URI $url -OutFile zips/$file
 			if ($unpack) {
 				Write-Output "  Unpacking $file..."
