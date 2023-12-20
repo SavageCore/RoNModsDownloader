@@ -109,12 +109,13 @@ for ($i = 0; $i -lt $len; $i++) {
 	$update = $true
 	if ($null -eq $config.${name}) {
 		$config | Add-Member -Name $name -Value @{} -MemberType NoteProperty
-		$config.${name}.md5 = $mod.data.filehash.md5
 	}
 	elseif ($mod.data.filehash.md5 -eq $config.${name}.md5) {
 		$update = $false # already up to date
 		Write-Output "  Subscription is up to date"
 	}
+
+	$config.${name}.md5 = $mod.data.filehash.md5
 
 	$datalen = $mod.data.length
 	[string]$datalen_str = $datalen
