@@ -10,6 +10,10 @@ A simple PowerShell script to automatically download all the mods you subscribed
 6. Download the `download_mods.ps1` file and place it in a folder where you want the downloaded zips of mods to appear
 7. Right-click the `download_mods.ps1` file and select "Run with PowerShell". You will eventually be prompted for the OAuth access **token** from before.
 
+## Requirements
+
+You must have [7-Zip](https://www.7-zip.org/) installed and added to your PATH. The `7z` command must be available in PowerShell.
+
 If you have done the setup once then it'll just read the settings from the configuration file it generated and everything should happen automatically. If you want to redo the setup, delete or rename `config.json` and it should show the prompts again.
 
 When you run it a window should pop up where it'll tell you how many subscriptions it found, and it should start downloading and unpacking all the zip files.

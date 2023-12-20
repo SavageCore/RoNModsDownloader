@@ -194,7 +194,8 @@ for ($i = 0; $i -lt $len; $i++) {
 				if (Test-Path $dst) {
 					Remove-Item $dst
 				}
-				[System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $dst)
+				# Use 7zip to extract for better performance and supporting Deflate64
+				& 7z x -y -o"$destination" "zips/$file" $entry.FullName > $null
 			}
 			$zip.Dispose()
 		}
