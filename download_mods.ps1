@@ -133,22 +133,22 @@ for ($i = 0; $i -lt $len; $i++) {
 		$data = $mod.data[$j]
 		$file = $data.filename
 
-		# If config doesn't have a file entry, add it
-		if ($null -eq $config.subscriptions.${name}.file) {
-			$config.subscriptions.${name} | Add-Member -Name file -Value @{} -MemberType NoteProperty
-		}
 		$config.subscriptions.${name}.file = $file
 
+		if (-not(Test-Path zips/$name)) {
+			Mkdir zips/$name
+		}
+
 		# Compare file hashes, redownload if they don't match
-		if (Test-Path zips/$file) {
-			$mod_md5 = Get-FileHash zips/$file -Algorithm MD5 | Select-Object -ExpandProperty Hash
+		if (Test-Path zips/$name/$file) {
+			$mod_md5 = Get-FileHash zips/$name/$file -Algorithm MD5 | Select-Object -ExpandProperty Hash
 			if ($mod_md5 -ne $data.filehash.md5) {
 				$update = $true # already up to date
 				Write-Output "    File mismatch"
 			}
 		}
 
-		if (-not(Test-Path zips/$file) -or $update) {
+		if (-not(Test-Path zips/$name/$file) -or $update) {
 			Write-Output "    Downloading $file..."
 			$url = $data.download.binary_url
 
@@ -156,14 +156,14 @@ for ($i = 0; $i -lt $len; $i++) {
 			# https://stackoverflow.com/questions/28682642/powershell-why-is-using-invoke-webrequest-much-slower-than-a-browser-download
 			$ProgressPreference = 'SilentlyContinue'
 
-			Invoke-WebRequest -UseBasicParsing -URI $url -OutFile zips/$file
+			Invoke-WebRequest -UseBasicParsing -URI $url -OutFile zips/$name/$file
 		}
 		else {
 			Write-Output "    Skipped download of $file (already exists and up to date)."
 		}
 
 		if ($unpack) {
-			$zip = [System.IO.Compression.ZipFile]::OpenRead("zips/$file")
+			$zip = [System.IO.Compression.ZipFile]::OpenRead("zips/$name/$file")
 			$fileCount = $zip.Entries.Count
 			$fileStr = if ($fileCount -gt 1) { "files" } else { "file" }
 			Write-Output "    Extracting $fileCount $fileStr..."
@@ -176,12 +176,12 @@ for ($i = 0; $i -lt $len; $i++) {
 					# Generate md5 hash of the destination file
 					$dst_md5 = Get-FileHash $dst -Algorithm MD5 | Select-Object -ExpandProperty Hash
 
-					# Generate md5 hash of the file within the zip
-					$stream = $entry.Open()
-					$md5 = [System.Security.Cryptography.MD5]::Create()
-					$hash = $md5.ComputeHash($stream)
-					$zip_md5 = [BitConverter]::ToString($hash) -replace '-', ''
-					$stream.Close()
+					# Use 7-Zip to extract the file to a temporary location
+					& 7z x -y -o"$env:TEMP" "zips/$name/$file" $entry.FullName > $null
+
+					$zip_md5 = Get-FileHash "$env:TEMP\$($entry.FullName)" -Algorithm MD5 | Select-Object -ExpandProperty Hash
+					# Remove the temporary file
+					Remove-Item "$env:TEMP\$($entry.FullName)"
 
 					# If the hashes don't match, extract the file
 					if ($dst_md5 -eq $zip_md5) {
@@ -195,7 +195,7 @@ for ($i = 0; $i -lt $len; $i++) {
 					Remove-Item $dst
 				}
 				# Use 7zip to extract for better performance and supporting Deflate64
-				& 7z x -y -o"$destination" "zips/$file" $entry.FullName > $null
+				& 7z x -y -o"$destination" "zips/$name/$file" $entry.FullName > $null
 			}
 			$zip.Dispose()
 		}
@@ -205,25 +205,34 @@ for ($i = 0; $i -lt $len; $i++) {
 Write-Output ""
 Write-Output "Checking for removed subscriptions..."
 # Remove any files that are no longer subscribed to
-$files = Get-ChildItem zips
-foreach ($file in $files) {
-	$found = $false
-	foreach ($sub in $sublist.data) {
-		if ($sub.modfile.filename -eq $file) {
-			$found = $true
-			break
-		}
-	}
-	if (-not($found)) {
-		Write-Output "  Removing $file"
-		# Find the subscription that contains this file and remove it
-		foreach ($sub in $config.subscriptions.psobject.properties) {
-			if ($sub.value.file -eq $file) {
-				Write-Output "    Removing config entry for $file"
-				$config.subscriptions.psobject.properties.remove($sub.name)
+# Search for the files within each subscription folder within zips
+$mod_folders = Get-ChildItem zips
+foreach ($mod_folder in $mod_folders) {
+	$mod_name = $mod_folder.Name
+	$mod_files = Get-ChildItem zips/$mod_name
+	foreach ($mod_file in $mod_files) {
+		$found = $false
+		foreach ($sub in $sublist.data) {
+			if ($sub.modfile.filename -eq $mod_file) {
+				$found = $true
+				break
 			}
 		}
-		Remove-Item zips/$file
+		if (-not($found)) {
+			Write-Output "  Removing $mod_file"
+			# Find the subscription that contains this file and remove it
+			foreach ($sub in $config.subscriptions.psobject.properties) {
+				if ($sub.value.file -eq $mod_file) {
+					$config.subscriptions.psobject.properties.remove($sub.name)
+				}
+			}
+			# Remove the file
+			Remove-Item zips/$mod_name/$mod_file
+			# Remove the folder if it's empty
+			if ((Get-ChildItem zips/$mod_name).length -eq 0) {
+				Remove-Item zips/$mod_name
+			}
+		}
 	}
 }
 
