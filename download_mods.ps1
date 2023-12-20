@@ -205,7 +205,6 @@ for ($i = 0; $i -lt $len; $i++) {
 Write-Output ""
 Write-Output "Checking for removed subscriptions..."
 # Remove any files that are no longer subscribed to
-# Search for the files within each subscription folder within zips
 $mod_folders = Get-ChildItem zips
 foreach ($mod_folder in $mod_folders) {
 	$mod_name = $mod_folder.Name
@@ -226,6 +225,18 @@ foreach ($mod_folder in $mod_folders) {
 					$config.subscriptions.psobject.properties.remove($sub.name)
 				}
 			}
+			Write-Output "  Searching for extracted files to remove..."
+			# Find and remove the extracted files from mod_file
+			$zip = [System.IO.Compression.ZipFile]::OpenRead("zips/$mod_name/$mod_file")
+			foreach ($entry in $zip.Entries) {
+				$dst = [io.path]::combine($destination, $entry.FullName)
+				if (Test-Path $dst) {
+					Write-Output $("    Removing {0}" -f @($entry.FullName))
+					Remove-Item $dst
+				}
+			}
+			$zip.Dispose()
+
 			# Remove the file
 			Remove-Item zips/$mod_name/$mod_file
 			# Remove the folder if it's empty
