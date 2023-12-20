@@ -162,6 +162,9 @@ for ($i = 0; $i -lt $len; $i++) {
 					}
 
 					Write-Output $("      Extract ==> {0}" -f @($entry.FullName))
+					if (Test-Path $dst) {
+						Remove-Item $dst
+					}
 					[System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $dst)
 				}
 				$zip.Dispose()
