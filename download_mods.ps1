@@ -47,7 +47,7 @@ else {
 			$dest = Read-Host "Desired location"
 		}
 		if (-not(Test-Path $dest)) {
-			Mkdir $dest
+			Mkdir $dest | Out-Null
 		}
 	}
 
@@ -80,7 +80,7 @@ $destination = $config.destination
 $unpack = $config.unpack
 
 if (-not(Test-Path zips)) {
-	Mkdir zips
+	Mkdir zips | Out-Null
 }
 
 Write-Output "Checking subscriptions..."
@@ -140,7 +140,7 @@ for ($i = 0; $i -lt $len; $i++) {
 		$config.subscriptions.${name}.file = $file
 
 		if (-not(Test-Path zips/$name)) {
-			Mkdir zips/$name
+			Mkdir zips/$name | Out-Null
 		}
 
 		# Compare file hashes, redownload if they don't match
