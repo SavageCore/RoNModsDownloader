@@ -110,9 +110,10 @@ for ($i = 0; $i -lt $len; $i++) {
 	if ($null -eq $config.${name}) {
 		$config | Add-Member -Name $name -Value @{} -MemberType NoteProperty
 	}
-	elseif ($mod.data.filehash.md5 -eq $config.${name}.md5) {
+
+	if ($mod.data.filehash.md5 -eq $config.${name}.md5) {
 		$update = $false # already up to date
-		Write-Output "  Subscription is up to date"
+		Write-Output "  Subscription is up to date, checking if files match..."
 	}
 
 	$config.${name}.md5 = $mod.data.filehash.md5
@@ -125,6 +126,14 @@ for ($i = 0; $i -lt $len; $i++) {
 	for ($j = 0; $j -lt $datalen; $j++) {
 		$data = $mod.data[$j]
 		$file = $data.filename
+
+		# Compare file hashes, redownload if they don't match
+		$mod_md5 = Get-FileHash zips/$file -Algorithm MD5 | Select-Object -ExpandProperty Hash
+		if ($mod_md5 -ne $data.filehash.md5) {
+			$update = $true # already up to date
+			Write-Output "    File mismatch"
+		}
+
 		if (-not(Test-Path zips/$file) -or $update) {
 			Write-Output "    Downloading $file..."
 			$url = $data.download.binary_url
