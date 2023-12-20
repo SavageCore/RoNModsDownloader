@@ -140,10 +140,12 @@ for ($i = 0; $i -lt $len; $i++) {
 		$config.subscriptions.${name}.file = $file
 
 		# Compare file hashes, redownload if they don't match
-		$mod_md5 = Get-FileHash zips/$file -Algorithm MD5 | Select-Object -ExpandProperty Hash
-		if ($mod_md5 -ne $data.filehash.md5) {
-			$update = $true # already up to date
-			Write-Output "    File mismatch"
+		if (Test-Path zips/$file) {
+			$mod_md5 = Get-FileHash zips/$file -Algorithm MD5 | Select-Object -ExpandProperty Hash
+			if ($mod_md5 -ne $data.filehash.md5) {
+				$update = $true # already up to date
+				Write-Output "    File mismatch"
+			}
 		}
 
 		if (-not(Test-Path zips/$file) -or $update) {
