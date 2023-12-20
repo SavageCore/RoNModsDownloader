@@ -107,16 +107,22 @@ for ($i = 0; $i -lt $len; $i++) {
 	$name = $sub.name_id
 
 	$update = $true
-	if ($null -eq $config.${name}) {
-		$config | Add-Member -Name $name -Value @{} -MemberType NoteProperty
+	# If config doesn't have a subscriptions entry, add it
+	if ($null -eq $config.subscriptions) {
+		$config | Add-Member -Name subscriptions -Value @{} -MemberType NoteProperty
 	}
 
-	if ($mod.data.filehash.md5 -eq $config.${name}.md5) {
+	# If config doesn't have a subscription entry under subscrriptions, add it
+	if ($null -eq $config.subscriptions.${name}) {
+		$config.subscriptions | Add-Member -Name ${name} -Value @{} -MemberType NoteProperty
+	}
+
+	if ($mod.data.filehash.md5 -eq $config.subscriptions.${name}.md5) {
 		$update = $false # already up to date
 		Write-Output "  Subscription is up to date, checking if files match..."
 	}
 
-	$config.${name}.md5 = $mod.data.filehash.md5
+	$config.subscriptions.${name}.md5 = $mod.data.filehash.md5
 
 	$datalen = $mod.data.length
 	[string]$datalen_str = $datalen
@@ -126,6 +132,12 @@ for ($i = 0; $i -lt $len; $i++) {
 	for ($j = 0; $j -lt $datalen; $j++) {
 		$data = $mod.data[$j]
 		$file = $data.filename
+
+		# If config doesn't have a file entry, add it
+		if ($null -eq $config.subscriptions.${name}.file) {
+			$config.subscriptions.${name} | Add-Member -Name file -Value @{} -MemberType NoteProperty
+		}
+		$config.subscriptions.${name}.file = $file
 
 		# Compare file hashes, redownload if they don't match
 		$mod_md5 = Get-FileHash zips/$file -Algorithm MD5 | Select-Object -ExpandProperty Hash
@@ -143,53 +155,72 @@ for ($i = 0; $i -lt $len; $i++) {
 			$ProgressPreference = 'SilentlyContinue'
 
 			Invoke-WebRequest -UseBasicParsing -URI $url -OutFile zips/$file
-
-			if ($unpack) {
-				# Ensure the md5 hash matches before extracting
-				$md5 = Get-FileHash zips/$file -Algorithm MD5 | Select-Object -ExpandProperty Hash
-				if ($md5 -ne $data.filehash.md5) {
-					Write-Output "      MD5 hash mismatch. Aborting extract."
-					continue
-				}
-				$zip = [System.IO.Compression.ZipFile]::OpenRead("zips/$file")
-				$fileCount = $zip.Entries.Count
-				$fileStr = if ($fileCount -gt 1) { "files" } else { "file" }
-				Write-Output "    Extracting $fileCount $fileStr..."
-				Write-Output ""
-				foreach ($entry in $zip.Entries) {
-					$dst = [io.path]::combine($destination, $entry.FullName)
-
-					# If the file already exists, check if the hashes match
-					if ((Test-Path $dst)) {
-						# Generate md5 hash of the destination file
-						$dst_md5 = Get-FileHash $dst -Algorithm MD5 | Select-Object -ExpandProperty Hash
-
-						# Generate md5 hash of the file within the zip
-						$stream = $entry.Open()
-						$md5 = [System.Security.Cryptography.MD5]::Create()
-						$hash = $md5.ComputeHash($stream)
-						$zip_md5 = [BitConverter]::ToString($hash) -replace '-', ''
-						$stream.Close()
-
-						# If the hashes don't match, extract the file
-						if ($dst_md5 -eq $zip_md5) {
-							Write-Output $("      Skipped extract of {0} (files match)" -f @($entry.FullName))
-							continue
-						}
-					}
-
-					Write-Output $("      Extract ==> {0}" -f @($entry.FullName))
-					if (Test-Path $dst) {
-						Remove-Item $dst
-					}
-					[System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $dst)
-				}
-				$zip.Dispose()
-			}
 		}
 		else {
 			Write-Output "    Skipped download of $file (already exists and up to date)."
 		}
+
+		if ($unpack) {
+			$zip = [System.IO.Compression.ZipFile]::OpenRead("zips/$file")
+			$fileCount = $zip.Entries.Count
+			$fileStr = if ($fileCount -gt 1) { "files" } else { "file" }
+			Write-Output "    Extracting $fileCount $fileStr..."
+			Write-Output ""
+			foreach ($entry in $zip.Entries) {
+				$dst = [io.path]::combine($destination, $entry.FullName)
+
+				# If the file already exists, check if the hashes match
+				if ((Test-Path $dst)) {
+					# Generate md5 hash of the destination file
+					$dst_md5 = Get-FileHash $dst -Algorithm MD5 | Select-Object -ExpandProperty Hash
+
+					# Generate md5 hash of the file within the zip
+					$stream = $entry.Open()
+					$md5 = [System.Security.Cryptography.MD5]::Create()
+					$hash = $md5.ComputeHash($stream)
+					$zip_md5 = [BitConverter]::ToString($hash) -replace '-', ''
+					$stream.Close()
+
+					# If the hashes don't match, extract the file
+					if ($dst_md5 -eq $zip_md5) {
+						Write-Output $("      Skipped extract of {0} (files match)" -f @($entry.FullName))
+						continue
+					}
+				}
+
+				Write-Output $("      Extract ==> {0}" -f @($entry.FullName))
+				if (Test-Path $dst) {
+					Remove-Item $dst
+				}
+				[System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $dst)
+			}
+			$zip.Dispose()
+		}
+	}
+}
+
+Write-Output ""
+Write-Output "Checking for removed subscriptions..."
+# Remove any files that are no longer subscribed to
+$files = Get-ChildItem zips
+foreach ($file in $files) {
+	$found = $false
+	foreach ($sub in $sublist.data) {
+		if ($sub.modfile.filename -eq $file) {
+			$found = $true
+			break
+		}
+	}
+	if (-not($found)) {
+		Write-Output "  Removing $file"
+		# Find the subscription that contains this file and remove it
+		foreach ($sub in $config.subscriptions.psobject.properties) {
+			if ($sub.value.file -eq $file) {
+				Write-Output "    Removing config entry for $file"
+				$config.subscriptions.psobject.properties.remove($sub.name)
+			}
+		}
+		Remove-Item zips/$file
 	}
 }
 
