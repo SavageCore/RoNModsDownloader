@@ -1,3 +1,7 @@
+param(
+	[switch]$skip_hash_check = $false
+)
+
 Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
 
 # Used to simplify y/n prompts further in the script
@@ -141,6 +145,10 @@ for ($i = 0; $i -lt $len; $i++) {
 
 		# Compare file hashes, redownload if they don't match
 		if (Test-Path zips/$name/$file) {
+			if ($skip_hash_check) {
+				continue
+			}
+
 			$mod_md5 = Get-FileHash zips/$name/$file -Algorithm MD5 | Select-Object -ExpandProperty Hash
 			if ($mod_md5 -ne $data.filehash.md5) {
 				$update = $true # already up to date
@@ -173,6 +181,10 @@ for ($i = 0; $i -lt $len; $i++) {
 
 				# If the file already exists, check if the hashes match
 				if ((Test-Path $dst)) {
+					if ($skip_hash_check) {
+						continue
+					}
+
 					# Generate md5 hash of the destination file
 					$dst_md5 = Get-FileHash $dst -Algorithm MD5 | Select-Object -ExpandProperty Hash
 
