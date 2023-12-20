@@ -144,15 +144,13 @@ for ($i = 0; $i -lt $len; $i++) {
 		}
 
 		# Compare file hashes, redownload if they don't match
-		if (Test-Path zips/$name/$file) {
-			if ($skip_hash_check) {
-				continue
-			}
-
-			$mod_md5 = Get-FileHash zips/$name/$file -Algorithm MD5 | Select-Object -ExpandProperty Hash
-			if ($mod_md5 -ne $data.filehash.md5) {
-				$update = $true # already up to date
-				Write-Output "    File mismatch"
+		if (!$skip_hash_check) {
+			if (Test-Path zips/$name/$file) {
+				$mod_md5 = Get-FileHash zips/$name/$file -Algorithm MD5 | Select-Object -ExpandProperty Hash
+				if ($mod_md5 -ne $data.filehash.md5) {
+					$update = $true # already up to date
+					Write-Output "    File mismatch"
+				}
 			}
 		}
 
@@ -181,23 +179,26 @@ for ($i = 0; $i -lt $len; $i++) {
 
 				# If the file already exists, check if the hashes match
 				if ((Test-Path $dst)) {
-					if ($skip_hash_check) {
-						continue
+					if (!$skip_hash_check) {
+						# Generate md5 hash of the destination file
+						$dst_md5 = Get-FileHash $dst -Algorithm MD5 | Select-Object -ExpandProperty Hash
+
+						# Use 7-Zip to extract the file to a temporary location
+						& 7z x -y -o"$env:TEMP" "zips/$name/$file" $entry.FullName > $null
+
+						$zip_md5 = Get-FileHash "$env:TEMP\$($entry.FullName)" -Algorithm MD5 | Select-Object -ExpandProperty Hash
+						# Remove the temporary file
+						Remove-Item "$env:TEMP\$($entry.FullName)"
+
+						# If the hashes don't match, extract the file
+						if ($dst_md5 -eq $zip_md5) {
+							Write-Output $("      Skipped extract of {0} (files match)" -f @($entry.FullName))
+							continue
+						}
 					}
-
-					# Generate md5 hash of the destination file
-					$dst_md5 = Get-FileHash $dst -Algorithm MD5 | Select-Object -ExpandProperty Hash
-
-					# Use 7-Zip to extract the file to a temporary location
-					& 7z x -y -o"$env:TEMP" "zips/$name/$file" $entry.FullName > $null
-
-					$zip_md5 = Get-FileHash "$env:TEMP\$($entry.FullName)" -Algorithm MD5 | Select-Object -ExpandProperty Hash
-					# Remove the temporary file
-					Remove-Item "$env:TEMP\$($entry.FullName)"
-
-					# If the hashes don't match, extract the file
-					if ($dst_md5 -eq $zip_md5) {
-						Write-Output $("      Skipped extract of {0} (files match)" -f @($entry.FullName))
+					else {
+						# If file exists and we're skipping hash checks, skip extraction
+						Write-Output $("      Skipped extract of {0} (file exists)" -f @($entry.FullName))
 						continue
 					}
 				}
