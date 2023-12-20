@@ -143,7 +143,14 @@ for ($i = 0; $i -lt $len; $i++) {
 			$ProgressPreference = 'SilentlyContinue'
 
 			Invoke-WebRequest -UseBasicParsing -URI $url -OutFile zips/$file
+
 			if ($unpack) {
+				# Ensure the md5 hash matches before extracting
+				$md5 = Get-FileHash zips/$file -Algorithm MD5 | Select-Object -ExpandProperty Hash
+				if ($md5 -ne $data.filehash.md5) {
+					Write-Output "      MD5 hash mismatch. Aborting extract."
+					continue
+				}
 				$zip = [System.IO.Compression.ZipFile]::OpenRead("zips/$file")
 				$fileCount = $zip.Entries.Count
 				$fileStr = if ($fileCount -gt 1) { "files" } else { "file" }
