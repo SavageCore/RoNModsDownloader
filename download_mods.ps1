@@ -91,6 +91,53 @@ $len = $sublist.data.length
 [string]$len_str = $len
 Write-Output "Found $len_str subscription(s)."
 
+Write-Output ""
+Write-Output "Checking for removed subscriptions..."
+# Remove any files that are no longer subscribed to
+$mod_folders = Get-ChildItem zips
+foreach ($mod_folder in $mod_folders) {
+	$mod_name = $mod_folder.Name
+	$mod_files = Get-ChildItem zips/$mod_name
+	foreach ($mod_file in $mod_files) {
+		$found = $false
+		foreach ($sub in $sublist.data) {
+			if ($sub.modfile.filename -eq $mod_file) {
+				$found = $true
+				break
+			}
+		}
+		if (-not($found)) {
+			Write-Output "  Removing $mod_file"
+			# Find the subscription that contains this file and remove it
+			foreach ($sub in $config.subscriptions.psobject.properties) {
+				if ($sub.value.file -eq $mod_file) {
+					$config.subscriptions.psobject.properties.remove($sub.name)
+				}
+			}
+			Write-Output "  Searching for extracted files to remove..."
+			# Find and remove the extracted files from mod_file
+			$zip = [System.IO.Compression.ZipFile]::OpenRead("zips/$mod_name/$mod_file")
+			foreach ($entry in $zip.Entries) {
+				$dst = [io.path]::combine($destination, $entry.FullName)
+				# Hash check the file before removing it
+
+				if (Test-Path $dst) {
+					Write-Output $("    Removing {0}" -f @($entry.FullName))
+					Remove-Item $dst
+				}
+			}
+			$zip.Dispose()
+
+			# Remove the file
+			Remove-Item zips/$mod_name/$mod_file
+			# Remove the folder if it's empty
+			if ((Get-ChildItem zips/$mod_name).length -eq 0) {
+				Remove-Item zips/$mod_name
+			}
+		}
+	}
+}
+
 for ($i = 0; $i -lt $len; $i++) {
 	$sub = $sublist.data[$i]
 	$subname = $sub.name
@@ -211,51 +258,6 @@ for ($i = 0; $i -lt $len; $i++) {
 				& 7z x -y -o"$destination" "zips/$name/$file" $entry.FullName > $null
 			}
 			$zip.Dispose()
-		}
-	}
-}
-
-Write-Output ""
-Write-Output "Checking for removed subscriptions..."
-# Remove any files that are no longer subscribed to
-$mod_folders = Get-ChildItem zips
-foreach ($mod_folder in $mod_folders) {
-	$mod_name = $mod_folder.Name
-	$mod_files = Get-ChildItem zips/$mod_name
-	foreach ($mod_file in $mod_files) {
-		$found = $false
-		foreach ($sub in $sublist.data) {
-			if ($sub.modfile.filename -eq $mod_file) {
-				$found = $true
-				break
-			}
-		}
-		if (-not($found)) {
-			Write-Output "  Removing $mod_file"
-			# Find the subscription that contains this file and remove it
-			foreach ($sub in $config.subscriptions.psobject.properties) {
-				if ($sub.value.file -eq $mod_file) {
-					$config.subscriptions.psobject.properties.remove($sub.name)
-				}
-			}
-			Write-Output "  Searching for extracted files to remove..."
-			# Find and remove the extracted files from mod_file
-			$zip = [System.IO.Compression.ZipFile]::OpenRead("zips/$mod_name/$mod_file")
-			foreach ($entry in $zip.Entries) {
-				$dst = [io.path]::combine($destination, $entry.FullName)
-				if (Test-Path $dst) {
-					Write-Output $("    Removing {0}" -f @($entry.FullName))
-					Remove-Item $dst
-				}
-			}
-			$zip.Dispose()
-
-			# Remove the file
-			Remove-Item zips/$mod_name/$mod_file
-			# Remove the folder if it's empty
-			if ((Get-ChildItem zips/$mod_name).length -eq 0) {
-				Remove-Item zips/$mod_name
-			}
 		}
 	}
 }
