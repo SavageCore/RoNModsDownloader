@@ -96,6 +96,9 @@ Write-Output "Checking for removed subscriptions..."
 # Remove any files that are no longer subscribed to
 $mod_folders = Get-ChildItem zips
 foreach ($mod_folder in $mod_folders) {
+	if ($mod_folder.Name -eq "_manual") {
+		continue
+	}
 	$mod_name = $mod_folder.Name
 	$mod_files = Get-ChildItem zips/$mod_name
 	foreach ($mod_file in $mod_files) {
@@ -257,6 +260,82 @@ for ($i = 0; $i -lt $len; $i++) {
 				# Use 7zip to extract for better performance and supporting Deflate64
 				& 7z x -y -o"$destination" "zips/$name/$file" $entry.FullName > $null
 			}
+			$zip.Dispose()
+		}
+	}
+}
+
+Write-Output ""
+Write-Output "Installing any mods in the _manual folder..."
+Write-Output ""
+# Install any mods in the _manual folder
+if ($unpack) {
+	$manual_folder = Get-ChildItem zips/_manual
+	if ($manual_folder) {
+		$manual_files = Get-ChildItem zips/_manual
+		foreach ($manual_file in $manual_files) {
+			# If the file is anything other than zip, skip it
+			if ($manual_file.Name -notlike "*.zip") {
+				Write-Output "Skipping $manual_file (only zip files are supported)"
+				Write-Output ""
+				continue
+			}
+
+			$zip = [System.IO.Compression.ZipFile]::OpenRead("zips/_manual/$manual_file")
+			# If the file is empty, skip it
+			if ($zip.Entries.Count -eq 0) {
+				Write-Output "Skipping $manual_file (empty zip file)"
+				Write-Output ""
+				continue
+			}
+
+			$fileCount = $zip.Entries.Count
+			$fileStr = if ($fileCount -gt 1) { "files" } else { "file" }
+			Write-Output "Extracting $fileCount $fileStr..."
+			Write-Output ""
+			foreach ($entry in $zip.Entries) {
+				# Skip any non .pak files
+				if ($entry.FullName -notlike "*.pak") {
+					Write-Output "  Skipping $entry (only .pak files are supported)"
+					continue
+				}
+
+				$dst = [io.path]::combine($destination, $entry.FullName)
+
+				# If the file already exists, check if the hashes match
+				if ((Test-Path $dst)) {
+					if (!$skip_hash_check) {
+						# Generate md5 hash of the destination file
+						$dst_md5 = Get-FileHash $dst -Algorithm MD5 | Select-Object -ExpandProperty Hash
+
+						# Use 7-Zip to extract the file to a temporary location
+						& 7z x -y -o"$env:TEMP" "zips/_manual/$manual_file" $entry.FullName > $null
+
+						$zip_md5 = Get-FileHash "$env:TEMP\$($entry.FullName)" -Algorithm MD5 | Select-Object -ExpandProperty Hash
+						# Remove the temporary file
+						Remove-Item "$env:TEMP\$($entry.FullName)"
+
+						# If the hashes don't match, extract the file
+						if ($dst_md5 -eq $zip_md5) {
+							Write-Output $("  Skipped extract of {0} (files match)" -f @($entry.FullName))
+							continue
+						}
+					}
+					else {
+						# If file exists and we're skipping hash checks, skip extraction
+						Write-Output $("  Skipped extract of {0} (file exists)" -f @($entry.FullName))
+						continue
+					}
+				}
+
+				Write-Output $("  Extract ==> {0}" -f @($entry.FullName))
+				if (Test-Path $dst) {
+					Remove-Item $dst
+				}
+				# Use 7zip to extract for better performance
+				& 7z x -y -o"$destination" "zips/_manual/$manual_file" $entry.FullName > $null
+			}
+			Write-Output ""
 			$zip.Dispose()
 		}
 	}
