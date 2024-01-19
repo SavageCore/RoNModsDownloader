@@ -8,7 +8,7 @@ A simple PowerShell script to automatically download all the mods you subscribed
 4. Generate API access and OAuth access keys if you don't have them yet (you'll also have to first accept the terms and conditions)
 5. Generate an OAuth access **token**. The token should have read access. You can choose what you want to name it. Make sure you save this as you'll need it later.
 6. Download the `download_mods.ps1` file and place it in a folder where you want the downloaded zips of mods to appear
-7. Right-click the `download_mods.ps1` file and select "Run with PowerShell". You will eventually be prompted for the OAuth access **token** from before.
+7. Right-click the `download_mods.ps1` file and select "Run with PowerShell". You will eventually be prompted for the OAuth access **token** from before. You can also download and run `run.bat` to skip hash checking which greatly increases speed but sacrificing file-checking quality.
 
 ## Requirements
 
