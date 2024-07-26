@@ -1,5 +1,6 @@
 import os
 import hashlib
+import shutil
 import zlib
 import requests
 import zipfile
@@ -120,6 +121,8 @@ def extract_mod(file_path, mods_dest_path):
 
             if not os.path.exists(dst) or get_crc(dst) != entry.CRC:
                 with zip_ref.open(entry) as source, open(dst, "wb") as target:
+                    if not entry.filename.endswith(".pak"):
+                        continue
                     total_size = entry.file_size
                     with tqdm(
                         total=total_size,
@@ -156,11 +159,14 @@ def remove_unsubscribed_mods():
                         dst = os.path.join(mods_dest_path, entry.filename)
                         if os.path.exists(dst):
                             print(f"    Removing {entry.filename}")
-                            os.remove(dst)
-                        # Remove the containing folder if it is empty
-                        folder = os.path.dirname(dst)
-                        if not os.listdir(folder):
-                            os.rmdir(folder)
+                            if os.path.isdir(dst):
+                                shutil.rmtree(dst)
+                            else:
+                                os.remove(dst)
+                        # # Remove the containing folder if it is empty
+                        # folder = os.path.dirname(dst)
+                        # if not os.listdir(folder):
+                        #     os.rmdir(folder)
 
                 # Remove the zip file
                 os.remove(zip_path)
@@ -257,15 +263,3 @@ else:
 
             mod_path = os.path.join(mods_down_path, mod_file)
             extract_mod(mod_path, mods_dest_path)
-            # # Open the zip file and check if any files are not extracted
-            # with zipfile.ZipFile(mod_path, "r") as zip_ref:
-            #     for entry in zip_ref.infolist():
-            #         dst = os.path.join(mods_dest_path, entry.filename)
-            #         # If the file is not extracted or the hash does not match, extract it
-            #         if not os.path.exists(dst) or get_crc(dst) != entry.CRC:
-            #             # print(f"    Extracting {entry.filename}")
-            #             extract_mod(mod_path, mods_dest_path)
-            #         else:
-            #             print(
-            #                 f"    Skipping {entry.filename} (already extracted and hash matches)"
-            #             )
