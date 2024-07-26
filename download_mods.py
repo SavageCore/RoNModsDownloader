@@ -117,12 +117,21 @@ def extract_mod(file_path, mods_dest_path):
     with zipfile.ZipFile(file_path, "r") as zip_ref:
         entries = zip_ref.infolist()
         for entry in entries:
-            dst = os.path.join(mods_dest_path, entry.filename)
+            if entry.is_dir():
+                continue  # Skip directories
+
+            # Handle nested .pak files
+            if entry.filename.endswith(".pak"):
+                dst = os.path.join(mods_dest_path, os.path.basename(entry.filename))
+            else:
+                parts = entry.filename.split("/")
+                if len(parts) > 1 and parts[-1].endswith(".pak"):
+                    dst = os.path.join(mods_dest_path, parts[-1])
+                else:
+                    continue  # Skip non-.pak files
 
             if not os.path.exists(dst) or get_crc(dst) != entry.CRC:
                 with zip_ref.open(entry) as source, open(dst, "wb") as target:
-                    if not entry.filename.endswith(".pak"):
-                        continue
                     total_size = entry.file_size
                     with tqdm(
                         total=total_size,
@@ -172,6 +181,25 @@ def remove_unsubscribed_mods():
                 os.remove(zip_path)
             else:
                 print(f"    {mod_file} not found")
+
+
+def mods_match(mod_files, mods_dest_path):
+    """Check if the mods in the destination path match the mod files."""
+    existing_mods = {
+        os.path.basename(f.path): get_crc(f.path)
+        for f in os.scandir(mods_dest_path)
+        if f.is_file() and f.name.endswith(".pak")
+    }
+    for mod_file in mod_files:
+        with zipfile.ZipFile(os.path.join(mods_down_path, mod_file), "r") as zip_ref:
+            entries = zip_ref.infolist()
+            for entry in entries:
+                if entry.is_dir() or not entry.filename.endswith(".pak"):
+                    continue
+                mod_name = os.path.basename(entry.filename)
+                if mod_name not in existing_mods:
+                    return False
+    return True
 
 
 # Get game install path
@@ -239,27 +267,15 @@ if os.path.exists(manual_path):
     manual_files = [os.path.join("_manual", f) for f in manual_files]
     mod_files.extend(manual_files)
 
-mods_match = True
-for mod_file in mod_files:
-    with zipfile.ZipFile(os.path.join(mods_down_path, mod_file), "r") as zip_ref:
-        for entry in zip_ref.infolist():
-            dst = os.path.join(mods_dest_path, entry.filename)
-            if not os.path.exists(dst) or get_crc(dst) != entry.CRC:
-                mods_match = False
-                break
-
-if mods_match:
+if mods_match(mod_files, mods_dest_path):
     print("Uninstalling mods...")
     for mod_file in existing_mods:
         print(f"  Removing {mod_file}")
         dst = os.path.join(mods_dest_path, mod_file)
         os.remove(dst)
 else:
-    if mod_files:
-        print("Extracting mods...")
-
-        for mod_file in mod_files:
-            print(f"  {mod_file}")
-
-            mod_path = os.path.join(mods_down_path, mod_file)
-            extract_mod(mod_path, mods_dest_path)
+    print("Extracting mods...")
+    for mod_file in mod_files:
+        print(f"  {mod_file}")
+        mod_path = os.path.join(mods_down_path, mod_file)
+        extract_mod(mod_path, mods_dest_path)
