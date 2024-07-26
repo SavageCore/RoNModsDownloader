@@ -111,6 +111,33 @@ def download_mod(mod_id):
             save_config(config)
 
 
+def extract_mod(file_path, mods_dest_path):
+    # Open the zip file and check if any files are not extracted
+    with zipfile.ZipFile(file_path, "r") as zip_ref:
+        entries = zip_ref.infolist()
+        for entry in entries:
+            dst = os.path.join(mods_dest_path, entry.filename)
+
+            if not os.path.exists(dst) or get_crc(dst) != entry.CRC:
+                with zip_ref.open(entry) as source, open(dst, "wb") as target:
+                    total_size = entry.file_size
+                    with tqdm(
+                        total=total_size,
+                        desc=f"    Extracting {entry.filename}",
+                        unit="iB",
+                        unit_scale=True,
+                        unit_divisor=1024,
+                    ) as file_bar:
+                        for chunk in iter(lambda: source.read(8192), b""):
+                            target.write(chunk)
+                            file_bar.update(len(chunk))
+            else:
+                print(
+                    f"    Skipping {entry.filename} (already extracted and hash matches)"
+                )
+        print("")
+
+
 def remove_unsubscribed_mods():
     """
     Remove any mods that are no longer subscribed to.
@@ -228,17 +255,17 @@ else:
         for mod_file in mod_files:
             print(f"  {mod_file}")
 
-            # Open the zip file and check if any files are not extracted
-            with zipfile.ZipFile(
-                os.path.join(mods_down_path, mod_file), "r"
-            ) as zip_ref:
-                for entry in zip_ref.infolist():
-                    dst = os.path.join(mods_dest_path, entry.filename)
-                    # If the file is not extracted or the hash does not match, extract it
-                    if not os.path.exists(dst) or get_crc(dst) != entry.CRC:
-                        print(f"    Extracting {entry.filename}")
-                        zip_ref.extract(entry, mods_dest_path)
-                    else:
-                        print(
-                            f"    Skipping {entry.filename} (already extracted and hash matches)"
-                        )
+            mod_path = os.path.join(mods_down_path, mod_file)
+            extract_mod(mod_path, mods_dest_path)
+            # # Open the zip file and check if any files are not extracted
+            # with zipfile.ZipFile(mod_path, "r") as zip_ref:
+            #     for entry in zip_ref.infolist():
+            #         dst = os.path.join(mods_dest_path, entry.filename)
+            #         # If the file is not extracted or the hash does not match, extract it
+            #         if not os.path.exists(dst) or get_crc(dst) != entry.CRC:
+            #             # print(f"    Extracting {entry.filename}")
+            #             extract_mod(mod_path, mods_dest_path)
+            #         else:
+            #             print(
+            #                 f"    Skipping {entry.filename} (already extracted and hash matches)"
+            #             )
