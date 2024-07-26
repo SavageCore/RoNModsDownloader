@@ -158,16 +158,17 @@ def remove_unsubscribed_mods():
         mod_file = sub["file"]
 
         if mod_file not in [sub["modfile"]["filename"] for sub in subscriptions]:
+            print("Cleaning up unsubscribed mods...")
             zip_path = os.path.join(mods_down_path, mod_file)
 
             if os.path.exists(zip_path):
                 print(f"  Removing {mod_file}")
                 with zipfile.ZipFile(zip_path, "r") as zip_ref:
-                    print("  Searching for extracted files to remove...")
+                    print("    Searching for extracted files to remove...")
                     for entry in zip_ref.infolist():
                         dst = os.path.join(mods_dest_path, entry.filename)
                         if os.path.exists(dst):
-                            print(f"    Removing {entry.filename}")
+                            print(f"      Removing {entry.filename}")
                             if os.path.isdir(dst):
                                 shutil.rmtree(dst)
                             else:
@@ -181,6 +182,7 @@ def remove_unsubscribed_mods():
                 os.remove(zip_path)
             else:
                 print(f"    {mod_file} not found")
+            print("")
 
 
 def mods_match(mod_files, mods_dest_path):
@@ -220,7 +222,7 @@ subscriptions = get_subscriptions()
 
 # Remove any files that are no longer subscribed to)
 remove_unsubscribed_mods()
-update_subscriptions_config(subscriptions)
+config = update_subscriptions_config(subscriptions)
 
 # Download new mods, checking if they are already downloaded
 if len(subscriptions) == 0:
@@ -267,6 +269,7 @@ if os.path.exists(manual_path):
     manual_files = [os.path.join("_manual", f) for f in manual_files]
     mod_files.extend(manual_files)
 
+print("")
 if mods_match(mod_files, mods_dest_path):
     print("Uninstalling mods...")
     for mod_file in existing_mods:

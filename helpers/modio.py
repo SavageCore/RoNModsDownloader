@@ -1,7 +1,6 @@
-import json
 import requests
 
-from helpers.config import get_oauth_token, read_config
+from helpers.config import get_oauth_token, read_config, save_config
 
 MODIO_API_URL = "https://api.mod.io/v1"
 
@@ -48,5 +47,6 @@ def update_subscriptions_config(subscriptions):
             "download": sub["modfile"]["download"]["binary_url"],
         }
 
-    with open("config.json", "w") as f:
-        json.dump(config, f, indent=4)
+    save_config(config)
+
+    return config
