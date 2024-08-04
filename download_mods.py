@@ -162,27 +162,29 @@ def remove_unsubscribed_mods():
 
         if mod_file not in [sub["modfile"]["filename"] for sub in subscriptions]:
             print("Cleaning up unsubscribed mods...")
-            zip_path = os.path.join(mods_down_path, mod_file)
+            mod_path = os.path.join(mods_down_path, mod_file)
 
-            if os.path.exists(zip_path):
+            if os.path.exists(mod_path):
                 print(f"  Removing {mod_file}")
-                with zipfile.ZipFile(zip_path, "r") as zip_ref:
-                    print("    Searching for extracted files to remove...")
-                    for entry in zip_ref.infolist():
-                        dst = os.path.join(mods_dest_path, entry.filename)
-                        if os.path.exists(dst):
-                            print(f"      Removing {entry.filename}")
-                            if os.path.isdir(dst):
-                                shutil.rmtree(dst)
-                            else:
-                                os.remove(dst)
-                        # # Remove the containing folder if it is empty
-                        # folder = os.path.dirname(dst)
-                        # if not os.listdir(folder):
-                        #     os.rmdir(folder)
+                # If the mod is a zip file, extract it and remove the zip file
+                if mod_file.endswith(".zip"):
+                    with zipfile.ZipFile(mod_path, "r") as zip_ref:
+                        print("    Searching for extracted files to remove...")
+                        for entry in zip_ref.infolist():
+                            dst = os.path.join(mods_dest_path, entry.filename)
+                            if os.path.exists(dst):
+                                print(f"      Removing {entry.filename}")
+                                if os.path.isdir(dst):
+                                    shutil.rmtree(dst)
+                                else:
+                                    os.remove(dst)
+                            # # Remove the containing folder if it is empty
+                            # folder = os.path.dirname(dst)
+                            # if not os.listdir(folder):
+                            #     os.rmdir(folder)
 
-                # Remove the zip file
-                os.remove(zip_path)
+                # Remove the mod file
+                os.remove(mod_path)
             else:
                 print(f"    {mod_file} not found")
             print("")
@@ -196,14 +198,21 @@ def mods_match(mod_files, mods_dest_path):
         if f.is_file() and f.name.endswith(".pak")
     }
     for mod_file in mod_files:
-        with zipfile.ZipFile(os.path.join(mods_down_path, mod_file), "r") as zip_ref:
-            entries = zip_ref.infolist()
-            for entry in entries:
-                if entry.is_dir() or not entry.filename.endswith(".pak"):
-                    continue
-                mod_name = os.path.basename(entry.filename)
-                if mod_name not in existing_mods:
-                    return False
+        if mod_file.endswith(".zip"):
+            with zipfile.ZipFile(
+                os.path.join(mods_down_path, mod_file), "r"
+            ) as zip_ref:
+                entries = zip_ref.infolist()
+                for entry in entries:
+                    if entry.is_dir() or not entry.filename.endswith(".pak"):
+                        continue
+                    mod_name = os.path.basename(entry.filename)
+                    if mod_name not in existing_mods:
+                        return False
+        else:
+            mod_name = os.path.basename(mod_file)
+            if mod_name not in existing_mods:
+                return False
     return True
 
 
@@ -284,6 +293,23 @@ else:
     for mod_file in mod_files:
         print(f"  {mod_file}")
         mod_path = os.path.join(mods_down_path, mod_file)
-        extract_mod(mod_path, mods_dest_path)
+        if mod_file.endswith(".zip"):
+            extract_mod(mod_path, mods_dest_path)
+        else:
+            mod_name = os.path.basename(mod_file)
+
+            existing_mods = {
+                os.path.basename(f.path): get_crc(f.path)
+                for f in os.scandir(mods_dest_path)
+                if f.is_file() and f.name.endswith(".pak")
+            }
+
+            if (
+                mod_name not in existing_mods
+                or get_crc(mod_path) != existing_mods[mod_name]
+            ):
+                shutil.copy(mod_path, mods_dest_path)
+            else:
+                print(f"    Skipping {mod_name} (already copied and hash matches)")
 
 input("Press Enter to exit...")
