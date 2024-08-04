@@ -223,7 +223,11 @@ if not game_path:
     exit()
 
 mods_dest_path = os.path.join(game_path, "ReadyOrNot", "Content", "Paks", "~mods")
-mods_down_path = "zips"
+mods_down_path = "mods"
+
+# If the mods directory doesn't exist, look for "zips" directory instead
+if not os.path.exists(mods_down_path):
+    mods_down_path = "zips"
 
 # If read_config returns False, create a new config file
 if not read_config():
