@@ -1,6 +1,9 @@
 config.json
 zips/
-mods/
+mods/*
+mods/_manual/*
+!mods/_manual
+!mods/_manual/.gitkeep
 1.0_zips/
 
 # Byte-compiled / optimized / DLL files

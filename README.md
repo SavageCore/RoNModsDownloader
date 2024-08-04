@@ -3,7 +3,7 @@
 [![GitHub Build Status](https://img.shields.io/github/actions/workflow/status/SavageCore/RoNModsDownloader/build.yml?style=flat-square&logo=pytest)](https://github.com/SavageCore/RoNModsDownloader/actions/workflows/build.yml)
 [![Code Style: black](https://img.shields.io/badge/code%20style-black-black)](https://pypi.org/project/black/)
 
-A simple PowerShell script to automatically download all the mods you subscribed to on mod.io for the game [Ready or Not](https://mod.io/g/readyornot). Saves you from having to keep the game running to download/update mods.
+A simple Python script to automatically download all the mods you subscribed to on mod.io for the game [Ready or Not](https://mod.io/g/readyornot). Saves you from having to keep the game running to download/update mods. You can also put `.zip` or `.pak` files in the mods/_manual folder and they'll be extracted/copied to the game's mods folder as well.
 
 ## Usage
 
