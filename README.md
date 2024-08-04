@@ -13,6 +13,17 @@ A simple Python script to automatically download all the mods you subscribed to 
 1. Download the latest release of this script from the [releases page](https://github.com/SavageCore/RoNModsDownloader/releases)
 1. Move the .exe file to the folder where you want to download the mods to
 
+## Overrides
+
+You may add files with their original folder structure from the base game folder to mods/_overrides. These files will be copied to the game's folder and overwrite the original files. This is useful for mods such as no intro where you're replacing the original files with modified ones.
+
+Example:
+```
+mods\_overrides\ReadyOrNot\Content\Movies\ReadyOrNot_StartupMovie.mp4
+```
+
+Will replace the original startup movie with the one you provide. See [here](https://www.nexusmods.com/readyornot/mods/4246) for a ready-to-use blank video file.
+
 ## Requirements
 
 If you have done the setup once then it'll just read the settings from the configuration file it generated and everything should happen automatically. If you want to redo the setup, delete or rename `config.json` and it should show the prompts again.

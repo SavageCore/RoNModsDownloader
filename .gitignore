@@ -4,6 +4,9 @@ mods/*
 mods/_manual/*
 !mods/_manual
 !mods/_manual/.gitkeep
+mods/_overrides/*
+!mods/_overrides
+!mods/_overrides/.gitkeep
 1.0_zips/
 
 # Byte-compiled / optimized / DLL files

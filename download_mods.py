@@ -198,6 +198,9 @@ def mods_match(mod_files, mods_dest_path):
         if f.is_file() and f.name.endswith(".pak")
     }
     for mod_file in mod_files:
+        if os.path.basename(mod_file) == ".gitkeep":
+            continue
+
         if mod_file.endswith(".zip"):
             with zipfile.ZipFile(
                 os.path.join(mods_down_path, mod_file), "r"
@@ -292,6 +295,31 @@ if mods_match(mod_files, mods_dest_path):
         print(f"  Removing {mod_file}")
         dst = os.path.join(mods_dest_path, mod_file)
         os.remove(dst)
+
+    # Uninstall overrides
+    overrides_path = os.path.join(mods_down_path, "_overrides")
+    if os.path.exists(overrides_path):
+        print("Restoring overrides...")
+        for root, _, files in os.walk(overrides_path):
+            for file in files:
+                if file == ".gitkeep":
+                    continue
+
+                dst = os.path.join(
+                    game_path,
+                    os.path.relpath(os.path.join(root, file), start=overrides_path),
+                )
+
+                if os.path.exists(dst + ".ron_mods_backup"):
+                    if os.path.exists(dst):
+                        print(f"  Removing {os.path.relpath(dst, start=game_path)}")
+                        os.remove(dst)
+
+                    print(
+                        f"  Restoring backup of {os.path.relpath(dst, start=game_path)}"
+                    )
+                    shutil.move(dst + ".ron_mods_backup", dst)
+        print("")
 else:
     print("Extracting mods...")
     for mod_file in mod_files:
@@ -315,5 +343,27 @@ else:
                 shutil.copy(mod_path, mods_dest_path)
             else:
                 print(f"    Skipping {mod_name} (already copied and hash matches)")
+
+    overrides_path = os.path.join(mods_down_path, "_overrides")
+
+    if os.path.exists(overrides_path):
+        print("")
+        print("Replacing overrides...")
+        for root, _, files in os.walk(overrides_path):
+            for file in files:
+                if file == ".gitkeep":
+                    continue
+
+                src = os.path.join(root, file)
+                dst = os.path.join(
+                    game_path, os.path.relpath(src, start=overrides_path)
+                )
+                if os.path.exists(dst):
+                    print(f"  Backing up {os.path.relpath(dst, start=game_path)}")
+                    shutil.move(dst, dst + ".ron_mods_backup")
+                print(f"  Replacing {os.path.relpath(dst, start=game_path)}")
+                shutil.copy(src, dst)
+        print("")
+
 
 input("Press Enter to exit...")
