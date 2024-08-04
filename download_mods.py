@@ -285,3 +285,5 @@ else:
         print(f"  {mod_file}")
         mod_path = os.path.join(mods_down_path, mod_file)
         extract_mod(mod_path, mods_dest_path)
+
+input("Press Enter to exit...")
