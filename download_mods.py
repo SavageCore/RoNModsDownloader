@@ -154,6 +154,9 @@ def remove_unsubscribed_mods():
     """
     Remove any mods that are no longer subscribed to.
     """
+    if not config["subscribed_mods"]:
+        return
+
     for sub in config["subscribed_mods"].values():
         mod_file = sub["file"]
 
