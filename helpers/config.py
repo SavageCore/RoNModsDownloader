@@ -26,8 +26,11 @@ def create_config():
     """
     prompt = "Enter an OAuth token with read access. Check the readme if you don't know how to set this up: "
     oauth_token = input(prompt)
+
     config = {"token": oauth_token, "subscribed_mods": []}
     save_config(config)
+    # Clear the screen
+    print("\033[H\033[J")
 
 
 def save_config(config):
