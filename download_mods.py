@@ -1,15 +1,22 @@
 import os
 import hashlib
 import shutil
+import sys
 import zlib
 import requests
 import zipfile
 
 from tqdm import tqdm
 
+from helpers.github import auto_update
 from helpers.steam import get_game_install_path
 from helpers.config import read_config, create_config, save_config
 from helpers.modio import get_subscriptions, update_subscriptions_config
+
+
+REPO = "SavageCore/RoNModsDownloader"
+CURRENT_VERSION = "0.2.0"
+APP_PATH = os.path.dirname(os.path.abspath(sys.executable))
 
 
 def get_md5(file_path):
@@ -218,6 +225,11 @@ def mods_match(mod_files, mods_dest_path):
                 return False
     return True
 
+
+print("Checking for updates...")
+config = read_config()
+auto_update(REPO, CURRENT_VERSION, APP_PATH, config)
+print("")
 
 # Get game install path
 game_path = get_game_install_path("1144200")
