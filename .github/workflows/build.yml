@@ -22,7 +22,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: Build with pyinstaller
-        run: pyinstaller -F -n RoNModsDownloader-win64 download_mods.py
+        run: pyinstaller -F -n RoNModsDownloader-win64 -i icon.ico download_mods.py
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
