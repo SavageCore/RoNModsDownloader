@@ -33,11 +33,12 @@ def auto_update(repo, current_version, app_path, config):
     updater_path = os.path.join(app_path, "updater.exe")
 
     if not os.path.exists(updater_path):
-        print(f"Updater executable not found at {updater_path}")
-        print(
-            "Please make sure to download the updater executable from the repository."
+        print("Updater not found. Downloading latest version...")
+        print("")
+        download_update(
+            "https://github.com/SavageCore/RoNModsDownloader/releases/latest/download/updater.exe",
+            updater_path,
         )
-        return
 
     if not isinstance(config, dict):
         config = {}
