@@ -226,12 +226,6 @@ def mods_match(mod_files, mods_dest_path):
     return True
 
 
-print("Checking for updates...")
-config = read_config()
-auto_update(REPO, CURRENT_VERSION, APP_PATH, config)
-print("")
-config = read_config()
-
 # Get game install path
 game_path = get_game_install_path("1144200")
 if not game_path:
@@ -249,11 +243,15 @@ if not os.path.exists(mods_down_path):
 if not read_config():
     create_config()
 
+config = read_config()
+
 token = config.get("token")
 if not token:
     create_config()
 
-config = read_config()
+print("Checking for updates...")
+auto_update(REPO, CURRENT_VERSION, APP_PATH, config)
+
 subscriptions = get_subscriptions()
 
 # Remove any files that are no longer subscribed to)
