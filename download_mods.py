@@ -259,10 +259,6 @@ remove_unsubscribed_mods()
 config = update_subscriptions_config(subscriptions)
 
 # Download new mods, checking if they are already downloaded
-if len(subscriptions) == 0:
-    print("No mods found in subscriptions, nothing to do, exiting...")
-    exit()
-
 print("Downloading mods...")
 for sub in subscriptions:
     mod_id = sub["name_id"]
@@ -302,6 +298,11 @@ if os.path.exists(manual_path):
     # Ensure mod_files has the path with subdirectory when extending
     manual_files = [os.path.join("_manual", f) for f in manual_files]
     mod_files.extend(manual_files)
+
+# If there are no mods to install, exit
+if not mod_files:
+    print("No mods found, nothing to do, exiting...")
+    sys.exit()
 
 print("")
 if mods_match(mod_files, mods_dest_path):
