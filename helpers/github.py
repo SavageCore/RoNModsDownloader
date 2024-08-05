@@ -51,6 +51,7 @@ def auto_update(repo, current_version, app_path, config):
             print(
                 f"Update check skipped to avoid rate limiting. Try again in {time_until_next_check} minutes."
             )
+            print("")
             return
 
     latest_version, download_url = check_for_update(repo)

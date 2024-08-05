@@ -59,3 +59,13 @@ def get_oauth_token():
     """
     config = read_config()
     return config["token"] if config else None
+
+
+def update_oauth_token():
+    """
+    Update the OAuth token in the configuration file.
+    """
+    config = read_config()
+    prompt = "Enter a new OAuth token with read access: "
+    config["token"] = input(prompt)
+    save_config(config)

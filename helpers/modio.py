@@ -1,6 +1,6 @@
 import requests
 
-from helpers.config import get_oauth_token, read_config, save_config
+from helpers.config import get_oauth_token, read_config, save_config, update_oauth_token
 
 MODIO_API_URL = "https://api.mod.io/v1"
 
@@ -16,11 +16,27 @@ def get_subscriptions():
     """
     oauth_token = get_oauth_token()
 
-    response = requests.get(
-        f"{MODIO_API_URL}/me/subscribed?game_id=3791",
-        headers={"Authorization": f"Bearer {oauth_token}"},
-    )
-    response.raise_for_status()
+    try:
+        response = requests.get(
+            f"{MODIO_API_URL}/me/subscribed?game_id=3791",
+            headers={"Authorization": f"Bearer {oauth_token}"},
+        )
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as http_err:
+        if response.status_code == 401:
+            print("")
+            print("Unauthorized access. Please update your OAuth token.")
+            update_oauth_token()
+            # Clear the screen
+            print("\033[H\033[J")
+            # Retry the request
+            return get_subscriptions()
+        else:
+            print(f"HTTP error occurred: {http_err}")
+        return []
+    except Exception as err:
+        print(f"An error occurred: {err}")
+        return []
 
     subscriptions = response.json()["data"]
 
