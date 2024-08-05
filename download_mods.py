@@ -233,6 +233,9 @@ if not game_path:
     exit()
 
 mods_dest_path = os.path.join(game_path, "ReadyOrNot", "Content", "Paks", "~mods")
+# Make directory if it doesn't exist
+os.makedirs(mods_dest_path, exist_ok=True)
+
 mods_down_path = "mods"
 
 # If the mods directory doesn't exist, look for "zips" directory instead
