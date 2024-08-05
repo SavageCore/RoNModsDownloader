@@ -230,6 +230,7 @@ print("Checking for updates...")
 config = read_config()
 auto_update(REPO, CURRENT_VERSION, APP_PATH, config)
 print("")
+config = read_config()
 
 # Get game install path
 game_path = get_game_install_path("1144200")
@@ -246,6 +247,10 @@ if not os.path.exists(mods_down_path):
 
 # If read_config returns False, create a new config file
 if not read_config():
+    create_config()
+
+token = config.get("token")
+if not token:
     create_config()
 
 config = read_config()

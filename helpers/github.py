@@ -39,6 +39,9 @@ def auto_update(repo, current_version, app_path, config):
         )
         return
 
+    if not isinstance(config, dict):
+        config = {}
+
     last_update_check = config.get("last_update_check")
     if last_update_check:
         last_update_check = datetime.fromisoformat(last_update_check)
