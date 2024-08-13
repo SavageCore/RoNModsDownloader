@@ -119,7 +119,7 @@ def download_mod(mod_id):
             save_config(config)
 
 
-def extract_mod(file_path, mods_dest_path):
+def extract_mod(file_path, mods_dest_path, savegames_dest_path):
     # Open the zip file and check if any files are not extracted
     with zipfile.ZipFile(file_path, "r") as zip_ref:
         entries = zip_ref.infolist()
@@ -127,16 +127,22 @@ def extract_mod(file_path, mods_dest_path):
             if entry.is_dir():
                 continue  # Skip directories
 
-            # Handle nested .pak files
+            # Determine destination based on file extension
             if entry.filename.endswith(".pak"):
                 dst = os.path.join(mods_dest_path, os.path.basename(entry.filename))
+            elif entry.filename.endswith(".sav"):
+                dst = os.path.join(savegames_dest_path, os.path.basename(entry.filename))
             else:
+                # Check if the file is nested and contains .pak or .sav files
                 parts = entry.filename.split("/")
                 if len(parts) > 1 and parts[-1].endswith(".pak"):
                     dst = os.path.join(mods_dest_path, parts[-1])
+                elif len(parts) > 1 and parts[-1].endswith(".sav"):
+                    dst = os.path.join(savegames_dest_path, parts[-1])
                 else:
-                    continue  # Skip non-.pak files
+                    continue  # Skip non-.pak and non-.sav files
 
+            # Check if the file needs to be extracted
             if not os.path.exists(dst) or get_crc(dst) != entry.CRC:
                 with zip_ref.open(entry) as source, open(dst, "wb") as target:
                     total_size = entry.file_size
@@ -178,7 +184,11 @@ def remove_unsubscribed_mods():
                     with zipfile.ZipFile(mod_path, "r") as zip_ref:
                         print("    Searching for extracted files to remove...")
                         for entry in zip_ref.infolist():
-                            dst = os.path.join(mods_dest_path, entry.filename)
+                            # Check if the file is a .pak or .sav file
+                            if entry.filename.endswith(".pak"):
+                                dst = os.path.join(mods_dest_path, entry.filename)
+                            elif entry.filename.endswith(".sav"):
+                                dst = os.path.join(savegames_dest_path, entry.filename)
                             if os.path.exists(dst):
                                 print(f"      Removing {entry.filename}")
                                 if os.path.isdir(dst):
@@ -225,7 +235,6 @@ def mods_match(mod_files, mods_dest_path):
                 return False
     return True
 
-
 # Get game install path
 game_path = get_game_install_path("1144200")
 if not game_path:
@@ -233,6 +242,7 @@ if not game_path:
     exit()
 
 mods_dest_path = os.path.join(game_path, "ReadyOrNot", "Content", "Paks", "~mods")
+savegames_dest_path = os.path.join(os.getenv('LOCALAPPDATA'), 'ReadyOrNot', 'Saved', 'SaveGames')
 # Make directory if it doesn't exist
 os.makedirs(mods_dest_path, exist_ok=True)
 
@@ -307,7 +317,6 @@ if not mod_files:
     print("No mods found, nothing to do, exiting...")
     sys.exit()
 
-print("")
 if mods_match(mod_files, mods_dest_path):
     print("Uninstalling mods...")
     for mod_file in existing_mods:
@@ -349,7 +358,7 @@ else:
         print(f"  {mod_file}")
         mod_path = os.path.join(mods_down_path, mod_file)
         if mod_file.endswith(".zip"):
-            extract_mod(mod_path, mods_dest_path)
+            extract_mod(mod_path, mods_dest_path, savegames_dest_path)
         else:
             mod_name = os.path.basename(mod_file)
 
