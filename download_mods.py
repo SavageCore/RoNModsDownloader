@@ -131,7 +131,9 @@ def extract_mod(file_path, mods_dest_path, savegames_dest_path):
             if entry.filename.endswith(".pak"):
                 dst = os.path.join(mods_dest_path, os.path.basename(entry.filename))
             elif entry.filename.endswith(".sav"):
-                dst = os.path.join(savegames_dest_path, os.path.basename(entry.filename))
+                dst = os.path.join(
+                    savegames_dest_path, os.path.basename(entry.filename)
+                )
             else:
                 # Check if the file is nested and contains .pak or .sav files
                 parts = entry.filename.split("/")
@@ -235,6 +237,7 @@ def mods_match(mod_files, mods_dest_path):
                 return False
     return True
 
+
 # Get game install path
 game_path = get_game_install_path("1144200")
 if not game_path:
@@ -242,7 +245,9 @@ if not game_path:
     exit()
 
 mods_dest_path = os.path.join(game_path, "ReadyOrNot", "Content", "Paks", "~mods")
-savegames_dest_path = os.path.join(os.getenv('LOCALAPPDATA'), 'ReadyOrNot', 'Saved', 'SaveGames')
+savegames_dest_path = os.path.join(
+    os.getenv("LOCALAPPDATA"), "ReadyOrNot", "Saved", "SaveGames"
+)
 # Make directory if it doesn't exist
 os.makedirs(mods_dest_path, exist_ok=True)
 
