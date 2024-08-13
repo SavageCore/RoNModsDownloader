@@ -15,7 +15,7 @@ from helpers.modio import get_subscriptions, update_subscriptions_config
 
 
 REPO = "SavageCore/RoNModsDownloader"
-CURRENT_VERSION = "0.2.4"
+CURRENT_VERSION = "0.3.0"
 APP_PATH = os.path.dirname(os.path.abspath(sys.executable))
 
 
