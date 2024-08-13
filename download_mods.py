@@ -342,6 +342,10 @@ if mods_match(mod_files, mods_dest_path):
 else:
     print("Extracting mods...")
     for mod_file in mod_files:
+        # Skip .gitkeep files and also _manual\.gitkeep files
+        if mod_file == ".gitkeep" or mod_file == "_manual/.gitkeep":
+            continue
+
         print(f"  {mod_file}")
         mod_path = os.path.join(mods_down_path, mod_file)
         if mod_file.endswith(".zip"):
