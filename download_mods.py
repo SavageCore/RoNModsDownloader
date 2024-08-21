@@ -395,7 +395,9 @@ else:
                 dst = os.path.join(
                     game_path, os.path.relpath(src, start=overrides_path)
                 )
-                if os.path.exists(dst):
+
+                # Backup the file if it exists, unless it's already backed up
+                if os.path.exists(dst) and not os.path.exists(dst + ".ron_mods_backup"):
                     print(f"  Backing up {os.path.relpath(dst, start=game_path)}")
                     shutil.move(dst, dst + ".ron_mods_backup")
                 print(f"  Replacing {os.path.relpath(dst, start=game_path)}")
