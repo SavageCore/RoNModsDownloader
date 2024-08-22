@@ -171,8 +171,9 @@ def extract_mod(file_path, mods_dest_path, savegames_dest_path):
                             target.write(chunk)
                             file_bar.update(len(chunk))
             else:
-                print(
-                    f"    Skipping {entry.filename} (already extracted and hash matches)"
+                print_colored(
+                    f"    Skipping {entry.filename} (already extracted and hash matches)",
+                    YELLOW,
                 )
         print("")
 
@@ -188,7 +189,7 @@ def remove_unsubscribed_mods():
         mod_file = sub["file"]
 
         if mod_file not in [sub["modfile"]["filename"] for sub in subscriptions]:
-            print("Cleaning up unsubscribed mods...")
+            print_colored("Cleaning up unsubscribed mods...", CYAN)
             mod_path = os.path.join(mods_down_path, mod_file)
 
             if os.path.exists(mod_path):
@@ -239,7 +240,7 @@ def install_mods(mod_files, mods_dest_path):
         if mod_file == ".gitkeep" or mod_file == normalized_gitkeep:
             continue
 
-        print(f" {mod_file}")
+        print_colored_bold(f" {mod_file}", WHITE)
         mod_path = os.path.join(mods_down_path, mod_file)
         if mod_file.endswith(".zip"):
             extract_mod(mod_path, mods_dest_path, savegames_dest_path)
