@@ -1,22 +1,35 @@
-import os
 import hashlib
+import os
 import shutil
 import sys
-import zlib
-import requests
 import zipfile
+import zlib
 
+import requests
 from tqdm import tqdm
 
+from helpers.config import create_config, read_config, save_config
 from helpers.github import auto_update
-from helpers.steam import get_game_install_path
-from helpers.config import read_config, create_config, save_config
 from helpers.modio import get_subscriptions, update_subscriptions_config
-
+from helpers.print_colored import (
+    CYAN,
+    GREEN,
+    RED,
+    WHITE,
+    YELLOW,
+    print_colored,
+    print_colored_bold,
+)
+from helpers.steam import get_game_install_path
 
 REPO = "SavageCore/RoNModsDownloader"
 CURRENT_VERSION = "0.3.0"
 APP_PATH = os.path.dirname(os.path.abspath(sys.executable))
+
+# Clear terminal
+
+print_colored_bold(f"\nRoN Mods Downloader ({CURRENT_VERSION})", GREEN)
+print("-" * 40)
 
 
 def get_md5(file_path):
@@ -210,14 +223,16 @@ def remove_unsubscribed_mods():
 
 
 def display_menu():
-    print(f"\nRoN Mods Downloader ({CURRENT_VERSION}):")
+    print("")
+    print_colored_bold("Menu", WHITE)
+    print("-" * 40)
     print("1. Install Mods")
     print("2. Uninstall Mods")
     print("3. Exit")
 
 
 def install_mods(mod_files, mods_dest_path):
-    print("Extracting mods...")
+    print_colored("Extracting mods...", CYAN)
     for mod_file in mod_files:
         normalized_gitkeep = os.path.normpath("_manual/.gitkeep")
 
@@ -244,13 +259,15 @@ def install_mods(mod_files, mods_dest_path):
             ):
                 shutil.copy(mod_path, mods_dest_path)
             else:
-                print(f"    Skipping {mod_name} (already copied and hash matches)")
+                print_colored(
+                    f"    Skipping {mod_name} (already copied and hash matches)", YELLOW
+                )
 
     overrides_path = os.path.join(mods_down_path, "_overrides")
 
     if os.path.exists(overrides_path):
         print("")
-        print("Replacing overrides...")
+        print_colored("Replacing overrides...", CYAN)
         for root, _, files in os.walk(overrides_path):
             for file in files:
                 if file == ".gitkeep":
@@ -272,9 +289,9 @@ def install_mods(mod_files, mods_dest_path):
 
 def uninstall_mods(existing_mods, mods_dest_path, mods_down_path, game_path):
     if not existing_mods:
-        print("No mods installed, nothing to do.")
+        print_colored("No mods installed, nothing to do.", YELLOW)
     else:
-        print("Uninstalling mods...")
+        print_colored("Uninstalling mods...", CYAN)
         for mod_file in existing_mods:
             print(f"  Removing {mod_file}")
             dst = os.path.join(mods_dest_path, mod_file)
@@ -283,7 +300,7 @@ def uninstall_mods(existing_mods, mods_dest_path, mods_down_path, game_path):
     # Uninstall overrides
     overrides_path = os.path.join(mods_down_path, "_overrides")
     if os.path.exists(overrides_path):
-        print("Restoring overrides...")
+        print_colored("Restoring overrides...", CYAN)
         for root, _, files in os.walk(overrides_path):
             for file in files:
                 if file == ".gitkeep":
@@ -309,7 +326,7 @@ def uninstall_mods(existing_mods, mods_dest_path, mods_down_path, game_path):
 # Get game install path
 game_path = get_game_install_path("1144200")
 if not game_path:
-    print("Ready or Not not found in Steam library.")
+    print_colored("Ready or Not not found in Steam library.", RED)
     exit()
 
 mods_dest_path = os.path.join(game_path, "ReadyOrNot", "Content", "Paks", "~mods")
@@ -335,7 +352,7 @@ token = config.get("token")
 if not token:
     create_config()
 
-print("Checking for downloader updates...")
+print_colored("Checking for downloader updates...", CYAN)
 auto_update(REPO, CURRENT_VERSION, APP_PATH, config)
 
 subscriptions = get_subscriptions()
@@ -345,7 +362,7 @@ remove_unsubscribed_mods()
 config = update_subscriptions_config(subscriptions)
 
 # Download new mods, checking if they are already downloaded
-print("Downloading mods...")
+print_colored("Downloading mods...", CYAN)
 for sub in subscriptions:
     mod_id = sub["name_id"]
     mod_file = sub["modfile"]["filename"]
@@ -355,8 +372,9 @@ for sub in subscriptions:
     if mod_file not in os.listdir(mods_down_path) or mod_md5 != get_md5(mod_file_path):
         download_mod(mod_id)
     else:
-        print(
-            f"  Skipping download of {mod_file} (already downloaded and hash matches)"
+        print_colored(
+            f"  Skipping download of {mod_file} (already downloaded and hash matches)",
+            YELLOW,
         )
 
 # Extract new mods, checking if they are already extracted
@@ -387,7 +405,7 @@ if os.path.exists(manual_path):
 
 # If there are no mods to install, exit
 if not mod_files:
-    print("No mods found, nothing to do, exiting...")
+    print_colored("No mods found, nothing to do, exiting...", YELLOW)
     sys.exit()
 
 # Add a menu to choose whether to install or uninstall mods
@@ -402,6 +420,6 @@ while True:
     elif choice == "3":
         break
     else:
-        print("Invalid choice, please try again.")
+        print_colored("Invalid choice, please try again.", RED)
 
 # input("Press Enter to exit...")
