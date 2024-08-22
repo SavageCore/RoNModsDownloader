@@ -30,6 +30,11 @@ print("\033[H\033[J")
 print_colored_bold(f"\nRoN Mods Downloader ({CURRENT_VERSION})", GREEN)
 print("-" * 40)
 
+skip_download = False
+
+if len(sys.argv) > 1 and sys.argv[1] == "--skip-download":
+    skip_download = True
+
 
 def get_md5(file_path):
     """
@@ -432,22 +437,28 @@ subscriptions = get_subscriptions()
 remove_unsubscribed_mods()
 config = update_subscriptions_config(subscriptions)
 
-# Download new mods, checking if they are already downloaded
-print_colored("Downloading mods...", CYAN)
-for sub in subscriptions:
-    mod_id = sub["name_id"]
-    mod_file = sub["modfile"]["filename"]
-    mod_md5 = sub["modfile"]["filehash"]["md5"]
-    mod_file_path = os.path.join(mods_down_path, mod_file)
+if not skip_download:
+    # Download new mods, checking if they are already downloaded
+    print_colored("Downloading mods...", CYAN)
+    print("")
+    for sub in subscriptions:
+        mod_id = sub["name_id"]
+        mod_file = sub["modfile"]["filename"]
+        mod_md5 = sub["modfile"]["filehash"]["md5"]
+        mod_file_path = os.path.join(mods_down_path, mod_file)
 
-    if mod_file not in os.listdir(mods_down_path) or mod_md5 != get_md5(mod_file_path):
-        download_mod(mod_id)
-    else:
-        print_colored(
-            f"  Skipping download of {mod_file} (already downloaded and hash matches)",
-            YELLOW,
-        )
+        if mod_file not in os.listdir(mods_down_path) or mod_md5 != get_md5(
+            mod_file_path
+        ):
+            download_mod(mod_id)
+        else:
+            print_colored(
+                f"  Skipping download of {mod_file} (already downloaded and hash matches)",
+                YELLOW,
+            )
+    print("")
 
+print_colored("Loading mods...", CYAN)
 # Extract new mods, checking if they are already extracted
 mod_files = get_mod_files(mods_down_path)
 existing_mods = os.listdir(mods_dest_path)
