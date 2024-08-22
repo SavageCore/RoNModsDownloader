@@ -26,8 +26,7 @@ REPO = "SavageCore/RoNModsDownloader"
 CURRENT_VERSION = "0.3.0"
 APP_PATH = os.path.dirname(os.path.abspath(sys.executable))
 
-# Clear terminal
-
+print("\033[H\033[J")
 print_colored_bold(f"\nRoN Mods Downloader ({CURRENT_VERSION})", GREEN)
 print("-" * 40)
 
@@ -420,6 +419,7 @@ while True:
     elif choice == "3":
         break
     else:
+        print("\033[H\033[J")
         print_colored("Invalid choice, please try again.", RED)
 
 # input("Press Enter to exit...")
