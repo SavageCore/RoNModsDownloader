@@ -222,11 +222,50 @@ def remove_unsubscribed_mods():
             print("")
 
 
+def get_mod_files(mods_down_path):
+    mod_files = os.listdir(mods_down_path)
+    # Remove directories from mod_files
+    mod_files = [
+        f for f in mod_files if not os.path.isdir(os.path.join(mods_down_path, f))
+    ]
+
+    return mod_files
+
+
 def display_menu():
+    existing_mods = os.listdir(mods_dest_path)
+    mods_match_status = mods_match(mod_files, mods_dest_path)
+    # Get the number of mods to install not including WorldGen or gitkeep files
+    mods_quantity = 0
+    for mod_file in mod_files:
+        if ".gitkeep" in mod_file:
+            continue
+
+        if "WorldGen" in mod_file:
+            continue
+
+        # If the file is a zip, count the number of .pak files inside
+        if mod_file.endswith(".zip"):
+            with zipfile.ZipFile(
+                os.path.join(mods_down_path, mod_file), "r"
+            ) as zip_ref:
+                entries = zip_ref.infolist()
+                for entry in entries:
+                    if entry.is_dir() or not entry.filename.endswith(".pak"):
+                        continue
+                    mods_quantity += 1
+        else:
+            mods_quantity += 1
+
+    mods_installed = len(existing_mods)
+
     print("")
     print_colored_bold("Menu", WHITE)
     print("-" * 40)
-    print("1. Install Mods")
+    if mods_match_status and mods_quantity == mods_installed:
+        print("1. Reinstall Mods")
+    else:
+        print("1. Install Mods")
     print("2. Uninstall Mods")
     print("3. Exit")
 
@@ -323,6 +362,35 @@ def uninstall_mods(existing_mods, mods_dest_path, mods_down_path, game_path):
         print("")
 
 
+def mods_match(mod_files, mods_dest_path):
+    """Check if the mods in the destination path match the mod files."""
+    existing_mods = {
+        os.path.basename(f.path): get_crc(f.path)
+        for f in os.scandir(mods_dest_path)
+        if f.is_file() and f.name.endswith(".pak")
+    }
+    for mod_file in mod_files:
+        if ".gitkeep" in os.path.basename(mod_file):
+            continue
+
+        if mod_file.endswith(".zip"):
+            with zipfile.ZipFile(
+                os.path.join(mods_down_path, mod_file), "r"
+            ) as zip_ref:
+                entries = zip_ref.infolist()
+                for entry in entries:
+                    if entry.is_dir() or not entry.filename.endswith(".pak"):
+                        continue
+                    mod_name = os.path.basename(entry.filename)
+                    if mod_name not in existing_mods:
+                        return False
+        else:
+            mod_name = os.path.basename(mod_file)
+            if mod_name not in existing_mods:
+                return False
+    return True
+
+
 # Get game install path
 game_path = get_game_install_path("1144200")
 if not game_path:
@@ -382,10 +450,8 @@ for sub in subscriptions:
         )
 
 # Extract new mods, checking if they are already extracted
-mod_files = os.listdir(mods_down_path)
+mod_files = get_mod_files(mods_down_path)
 existing_mods = os.listdir(mods_dest_path)
-# Remove directories from mod_files
-mod_files = [f for f in mod_files if not os.path.isdir(os.path.join(mods_down_path, f))]
 # Add files in mods_down_path/_manual to mod_files
 manual_path = os.path.join(mods_down_path, "_manual")
 if os.path.exists(manual_path):
