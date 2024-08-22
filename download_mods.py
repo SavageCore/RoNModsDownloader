@@ -273,10 +273,9 @@ def display_menu():
 def install_mods(mod_files, mods_dest_path):
     print_colored("Extracting mods...", CYAN)
     for mod_file in mod_files:
-        normalized_gitkeep = os.path.normpath("_manual/.gitkeep")
 
         # Skip .gitkeep files and also _manual\.gitkeep files
-        if mod_file == ".gitkeep" or mod_file == normalized_gitkeep:
+        if ".gitkeep" in mod_file:
             continue
 
         print_colored_bold(f" {mod_file}", WHITE)
@@ -309,7 +308,7 @@ def install_mods(mod_files, mods_dest_path):
         print_colored("Replacing overrides...", CYAN)
         for root, _, files in os.walk(overrides_path):
             for file in files:
-                if file == ".gitkeep":
+                if ".gitkeep" in file:
                     continue
 
                 src = os.path.join(root, file)
@@ -342,7 +341,7 @@ def uninstall_mods(existing_mods, mods_dest_path, mods_down_path, game_path):
         print_colored("Restoring overrides...", CYAN)
         for root, _, files in os.walk(overrides_path):
             for file in files:
-                if file == ".gitkeep":
+                if ".gitkeep" in file:
                     continue
 
                 dst = os.path.join(
