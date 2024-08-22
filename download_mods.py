@@ -271,11 +271,14 @@ def install_mods(mod_files, mods_dest_path):
 
 
 def uninstall_mods(existing_mods, mods_dest_path, mods_down_path, game_path):
-    print("Uninstalling mods...")
-    for mod_file in existing_mods:
-        print(f"  Removing {mod_file}")
-        dst = os.path.join(mods_dest_path, mod_file)
-        os.remove(dst)
+    if not existing_mods:
+        print("No mods installed, nothing to do.")
+    else:
+        print("Uninstalling mods...")
+        for mod_file in existing_mods:
+            print(f"  Removing {mod_file}")
+            dst = os.path.join(mods_dest_path, mod_file)
+            os.remove(dst)
 
     # Uninstall overrides
     overrides_path = os.path.join(mods_down_path, "_overrides")
