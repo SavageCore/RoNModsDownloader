@@ -342,6 +342,10 @@ mods_down_path = "mods"
 if not os.path.exists(mods_down_path):
     mods_down_path = "zips"
 
+if not os.path.exists(mods_down_path):
+    mods_down_path = "mods"
+    os.makedirs(mods_down_path, exist_ok=True)
+
 # If read_config returns False, create a new config file
 if not read_config():
     create_config()
