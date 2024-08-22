@@ -29,7 +29,7 @@ def replace_and_restart(temp_exe):
     shutil.move(temp_exe, new_exe_path)
 
     # Restart the application
-    subprocess.Popen([new_exe_path])
+    subprocess.Popen([new_exe_path], cwd=os.path.dirname(new_exe_path))
     sys.exit(0)
 
 
