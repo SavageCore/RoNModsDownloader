@@ -58,6 +58,7 @@ def auto_update(repo, current_version, app_path, config):
     latest_version, download_url = check_for_update(repo)
     if latest_version is None:
         print("Failed to check for updates.")
+        print("")
         return
     latest_version = latest_version[1:]
 
@@ -76,6 +77,7 @@ def auto_update(repo, current_version, app_path, config):
         sys.exit(0)
     else:
         print("No updates available.")
+        print("")
 
     config["last_update_check"] = datetime.now().isoformat()
     save_config(config)
