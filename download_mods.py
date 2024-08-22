@@ -219,11 +219,13 @@ def display_menu():
 def install_mods(mod_files, mods_dest_path):
     print("Extracting mods...")
     for mod_file in mod_files:
+        normalized_gitkeep = os.path.normpath("_manual/.gitkeep")
+
         # Skip .gitkeep files and also _manual\.gitkeep files
-        if mod_file == ".gitkeep" or mod_file == "_manual/.gitkeep":
+        if mod_file == ".gitkeep" or mod_file == normalized_gitkeep:
             continue
 
-        print(f"  {mod_file}")
+        print(f" {mod_file}")
         mod_path = os.path.join(mods_down_path, mod_file)
         if mod_file.endswith(".zip"):
             extract_mod(mod_path, mods_dest_path, savegames_dest_path)
