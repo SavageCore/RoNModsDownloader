@@ -72,6 +72,12 @@ def auto_update(repo, current_version, app_path, config):
         )
         print("")
 
+        # Download the latest updater
+        download_update(
+            "https://github.com/SavageCore/RoNModsDownloader/releases/latest/download/updater.exe",
+            updater_path,
+        )
+
         temp_path = os.path.join(app_path, "update_temp.exe")
         download_update(download_url, temp_path)
 
