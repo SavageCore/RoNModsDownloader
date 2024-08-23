@@ -321,12 +321,22 @@ def install_mods(mod_files, mods_dest_path):
                     game_path, os.path.relpath(src, start=overrides_path)
                 )
 
+                print_colored_bold(f" {os.path.relpath(dst, start=game_path)}", WHITE)
+
                 # Backup the file if it exists, unless it's already backed up
                 if os.path.exists(dst) and not os.path.exists(dst + ".ron_mods_backup"):
                     print(f"  Backing up {os.path.relpath(dst, start=game_path)}")
                     shutil.move(dst, dst + ".ron_mods_backup")
-                print(f"  Replacing {os.path.relpath(dst, start=game_path)}")
-                shutil.copy(src, dst)
+                # Replace the file if it doesn't exist or the hash doesn't match
+                if not os.path.exists(dst) or get_crc(src) != get_crc(dst):
+                    print(f"  Replacing {os.path.relpath(dst, start=game_path)}")
+                    shutil.copy(src, dst)
+                else:
+                    print_colored(
+                        f"  Skipping {os.path.relpath(dst, start=game_path)} (already replaced and hash matches)",
+                        YELLOW,
+                    )
+                print("")
         print("")
 
 
