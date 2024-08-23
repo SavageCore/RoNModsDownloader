@@ -305,6 +305,7 @@ def install_mods(mod_files, mods_dest_path):
                 print_colored(
                     f"    Skipping {mod_name} (already copied and hash matches)", YELLOW
                 )
+                print("")
 
     overrides_path = os.path.join(mods_down_path, "_overrides")
 
