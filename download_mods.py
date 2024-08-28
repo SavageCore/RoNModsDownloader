@@ -8,7 +8,12 @@ import zlib
 import requests
 from tqdm import tqdm
 
-from helpers.config import create_config, read_config, save_config
+from helpers.config import (
+    create_config,
+    get_oauth_token,
+    read_config,
+    save_config,
+)
 from helpers.github import auto_update
 from helpers.modio import get_subscriptions, update_subscriptions_config
 from helpers.print_colored import (
@@ -435,9 +440,7 @@ if not read_config():
 
 config = read_config()
 
-token = config.get("token")
-if not token:
-    create_config()
+token = get_oauth_token()
 
 print_colored("Checking for downloader updates...", CYAN)
 auto_update(REPO, CURRENT_VERSION, APP_PATH, config)
