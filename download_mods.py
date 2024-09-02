@@ -1,3 +1,4 @@
+import curses
 import hashlib
 import os
 import shutil
@@ -244,6 +245,7 @@ def get_mod_files(mods_down_path):
 
 
 def display_menu():
+    print_colored("Loading mods...", CYAN)
     existing_mods = os.listdir(mods_dest_path)
     mods_match_status = mods_match(mod_files, mods_dest_path)
     # Get the number of mods to install not including WorldGen or gitkeep files
@@ -278,10 +280,156 @@ def display_menu():
     else:
         print("1. Install Mods")
     print("2. Uninstall Mods")
-    print("3. Exit")
+    print("3. View Collections")
+    print("4. Exit")
 
 
-def install_mods(mod_files, mods_dest_path):
+def view_collections(collections):
+    def draw_menu(stdscr, selected_row_idx, scroll_position):
+        stdscr.clear()
+        max_y, max_x = stdscr.getmaxyx()
+
+        if not collections:
+            stdscr.addstr(
+                0, 0, "No collections found, returning to menu...", curses.color_pair(3)
+            )
+            stdscr.refresh()
+            stdscr.getch()
+            return False
+
+        stdscr.addstr(0, 0, "Collections", curses.color_pair(2) | curses.A_BOLD)
+        stdscr.addstr(1, 0, "-" * 40)
+
+        row = 2
+        for idx, collection in enumerate(collections):
+            if idx < scroll_position:
+                continue  # Skip collections above the scroll position
+
+            if row >= max_y - 1:
+                break  # Prevent writing outside the terminal window
+
+            collection_text = f"{collection}: [{collections[collection]['enabled']}]"
+            if len(collection_text) > max_x - 1:
+                collection_text = collection_text[: max_x - 4] + "..."
+
+            if idx == selected_row_idx:
+                stdscr.attron(curses.color_pair(1))
+                stdscr.addstr(row, 0, collection_text)
+                stdscr.attroff(curses.color_pair(1))
+            else:
+                stdscr.addstr(row, 0, collection_text)
+            row += 1
+
+        # Add return to menu option
+        stdscr.addstr(
+            max_y - 1,
+            0,
+            "Use the arrow keys to choose a collection and spacebar to toggle. Press 'q' to return to menu",
+            curses.color_pair(3),
+        )
+
+        stdscr.refresh()
+
+    def main(stdscr):
+        max_y, _ = stdscr.getmaxyx()
+
+        curses.curs_set(0)
+        curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_WHITE)
+        curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK)
+        curses.init_pair(3, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+
+        current_row = 0
+        scroll_position = 0
+
+        while True:
+            draw_menu(stdscr, current_row, scroll_position)
+            key = stdscr.getch()
+
+            if key == curses.KEY_UP and current_row > 0:
+                current_row -= 1
+                if current_row < scroll_position:
+                    scroll_position -= 1
+            elif key == curses.KEY_DOWN and current_row < len(collections) - 1:
+                current_row += 1
+                if current_row >= scroll_position + (max_y - 3):
+                    scroll_position += 1
+            elif key == ord(" "):
+                collection_name = list(collections.keys())[current_row]
+                collections[collection_name]["enabled"] = not collections[
+                    collection_name
+                ]["enabled"]
+                save_config(config)
+            elif key == ord("q"):
+                break
+
+    curses.wrapper(main)
+
+
+def gather_mods(mods_down_path):
+    mod_files = get_mod_files(mods_down_path)
+
+    # Add files in mods_down_path/_manual to mod_files
+    manual_path = os.path.join(mods_down_path, "_manual")
+    if os.path.exists(manual_path):
+        manual_files = []
+        for root, dirs, files in os.walk(manual_path):
+            for file in files:
+                # Construct the relative path from the manual_path
+                relative_path = os.path.relpath(os.path.join(root, file), mods_down_path)
+                manual_files.append(relative_path)
+
+        # Ensure mod_files has the path with subdirectory when extending
+        mod_files.extend(manual_files)
+
+    return mod_files
+
+
+def install_mods(mod_files, mods_dest_path, mods_down_path):
+    config = read_config()
+    collections = config["collections"]
+
+    # Add any enabled collections to the mod_files list
+    for collection in collections:
+        if collections[collection]["enabled"]:
+            for mod in collections[collection]["mods"]:
+                collection_path = os.path.join("_collections", collection)
+                # Check if the mod is a zip file and add the .pak files to mod_files
+                if mod.endswith(".zip"):
+                    with zipfile.ZipFile(
+                        os.path.join(mods_down_path, collection_path, mod), "r"
+                    ) as zip_ref:
+                        entries = zip_ref.infolist()
+                        for entry in entries:
+                            if entry.is_dir() or not entry.filename.endswith(".pak"):
+                                continue
+                            mod_files.append(os.path.join(collection_path, mod))
+                else:
+                    mod_files.append(os.path.join(collection_path, mod))
+        else:
+            for mod in collections[collection]["mods"]:
+                # If the mod is a zip file, remove the .pak files from mod_files
+                if mod.endswith(".zip"):
+                    file_path = os.path.join(
+                        mods_down_path, "_collections", collection, mod
+                    )
+                    with zipfile.ZipFile(
+                        file_path,
+                        "r",
+                    ) as zip_ref:
+                        entries = zip_ref.infolist()
+                        for entry in entries:
+                            if entry.is_dir() or not entry.filename.endswith(".pak"):
+                                continue
+                            # Remove the mod from destination path
+                            mod_path = os.path.join(mods_dest_path, entry.filename)
+                            if os.path.exists(mod_path):
+                                os.remove(mod_path)
+                else:
+                    # Check if the mod is in mods_dest_path and remove it
+                    mod_path = os.path.join(mods_dest_path, mod)
+                    if os.path.exists(mod_path):
+                        os.remove(mod_path)
+
     print_colored("Extracting mods...", CYAN)
     for mod_file in mod_files:
 
@@ -347,7 +495,9 @@ def install_mods(mod_files, mods_dest_path):
         print("")
 
 
-def uninstall_mods(existing_mods, mods_dest_path, mods_down_path, game_path):
+def uninstall_mods(mods_dest_path, mods_down_path, game_path):
+    existing_mods = os.listdir(mods_dest_path)
+
     if not existing_mods:
         print_colored("No mods installed, nothing to do.", YELLOW)
     else:
@@ -473,22 +623,47 @@ if not skip_download:
             )
     print("")
 
-print_colored("Loading mods...", CYAN)
-# Extract new mods, checking if they are already extracted
-mod_files = get_mod_files(mods_down_path)
-existing_mods = os.listdir(mods_dest_path)
-# Add files in mods_down_path/_manual to mod_files
-manual_path = os.path.join(mods_down_path, "_manual")
-if os.path.exists(manual_path):
-    manual_files = []
-    for root, dirs, files in os.walk(manual_path):
-        for file in files:
-            # Construct the relative path from the manual_path
-            relative_path = os.path.relpath(os.path.join(root, file), mods_down_path)
-            manual_files.append(relative_path)
+# Check if "_collections" directory exists
+collections_path = os.path.join(mods_down_path, "_collections")
 
-    # Ensure mod_files has the path with subdirectory when extending
-    mod_files.extend(manual_files)
+if not os.path.exists(collections_path):
+    os.makedirs(collections_path, exist_ok=True)
+
+# Get the list of collections
+collections = os.listdir(collections_path)
+
+# Iterate through the collections
+for collection in collections:
+    # Ignore .gitkeep files
+    if ".gitkeep" in collection:
+        continue
+
+    # Get the list of mods in the collection
+    collection_mods = os.listdir(os.path.join(collections_path, collection))
+
+    # If "collection" is not in the config file, add it
+    if "collections" not in config:
+        config["collections"] = {}
+
+    # Check if the collection is in the config file, if not add it
+    if collection not in config["collections"]:
+        config["collections"][collection] = {"enabled": False, "mods": []}
+
+    # Add the mods to the collection in the config file
+    for mod in collection_mods:
+        if mod not in config["collections"][collection]["mods"]:
+            config["collections"][collection]["mods"].append(mod)
+
+if "collections" not in config:
+    config["collections"] = {}
+
+# Update the config file
+save_config(config)
+
+# Return the list of collections
+collections = config["collections"]
+
+mod_files = gather_mods(mods_down_path)
 
 # If there are no mods to install, exit
 if not mod_files:
@@ -502,11 +677,15 @@ while True:
 
     if choice == "1":
         print("\033[H\033[J")
-        install_mods(mod_files, mods_dest_path)
+        install_mods(mod_files, mods_dest_path, mods_down_path)
     elif choice == "2":
         print("\033[H\033[J")
-        uninstall_mods(existing_mods, mods_dest_path, mods_down_path, game_path)
+        uninstall_mods(mods_dest_path, mods_down_path, game_path)
     elif choice == "3":
+        print("\033[H\033[J")
+        view_collections(collections)
+        mod_files = gather_mods(mods_down_path)
+    elif choice == "4":
         break
     else:
         print("\033[H\033[J")

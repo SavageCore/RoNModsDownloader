@@ -24,6 +24,10 @@ mods\_overrides\ReadyOrNot\Content\Movies\ReadyOrNot_StartupMovie.mp4
 
 Will replace the original startup movie with the one you provide. See [here](https://www.nexusmods.com/readyornot/mods/4246) for a ready-to-use blank video file.
 
+## Collections
+
+You may add groups of mods to toggle on/off by creating a folder in `mods/_collections`. These will then show up under the `View Collections` option on the main menu. The folder name will be the name of the collection. Use the arrow keys to select a collection and press Space to toggle it on/off. Press `q` to return to the main menu. These collections will be installed or uninstalled when you run `Install Mods` next.
+
 ## Notes
 
 If you have done the setup once then it'll just read the settings from the configuration file it generated and everything should happen automatically. If you want to redo the setup, delete or rename `config.json` and it should show the prompts again.
