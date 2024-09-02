@@ -208,6 +208,7 @@ def remove_unsubscribed_mods():
                 if mod_file.endswith(".zip"):
                     with zipfile.ZipFile(mod_path, "r") as zip_ref:
                         print("    Searching for extracted files to remove...")
+                        dst = ""
                         for entry in zip_ref.infolist():
                             # Check if the file is a .pak or .sav file
                             if entry.filename.endswith(".pak"):
