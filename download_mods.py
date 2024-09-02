@@ -480,22 +480,14 @@ existing_mods = os.listdir(mods_dest_path)
 # Add files in mods_down_path/_manual to mod_files
 manual_path = os.path.join(mods_down_path, "_manual")
 if os.path.exists(manual_path):
-    manual_files = os.listdir(manual_path)
-    # Enter any subdirectories and add the files to mod_files
-    for f in manual_files:
-        if os.path.isdir(os.path.join(manual_path, f)):
-            manual_files.extend(
-                [
-                    os.path.join(f, sub_f)
-                    for sub_f in os.listdir(os.path.join(manual_path, f))
-                ]
-            )
-    # Remove directories from manual_files
-    manual_files = [
-        f for f in manual_files if not os.path.isdir(os.path.join(manual_path, f))
-    ]
+    manual_files = []
+    for root, dirs, files in os.walk(manual_path):
+        for file in files:
+            # Construct the relative path from the manual_path
+            relative_path = os.path.relpath(os.path.join(root, file), mods_down_path)
+            manual_files.append(relative_path)
+
     # Ensure mod_files has the path with subdirectory when extending
-    manual_files = [os.path.join("_manual", f) for f in manual_files]
     mod_files.extend(manual_files)
 
 # If there are no mods to install, exit
