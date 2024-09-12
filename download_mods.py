@@ -29,7 +29,7 @@ from helpers.print_colored import (
 from helpers.steam import get_game_install_path
 
 REPO = "SavageCore/RoNModsDownloader"
-CURRENT_VERSION = "0.4.5"
+CURRENT_VERSION = "0.5.0"
 APP_PATH = os.path.dirname(os.path.abspath(sys.executable))
 
 print("\033[H\033[J")
