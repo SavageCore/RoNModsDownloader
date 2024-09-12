@@ -7,6 +7,9 @@ mods/_manual/*
 mods/_overrides/*
 !mods/_overrides
 !mods/_overrides/.gitkeep
+mods/_collections/*
+!mods/_collections
+!mods/_collections/.gitkeep
 1.0_zips/
 
 # Byte-compiled / optimized / DLL files
