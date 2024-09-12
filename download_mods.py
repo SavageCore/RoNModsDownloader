@@ -375,7 +375,9 @@ def gather_mods(mods_down_path):
         for root, dirs, files in os.walk(manual_path):
             for file in files:
                 # Construct the relative path from the manual_path
-                relative_path = os.path.relpath(os.path.join(root, file), mods_down_path)
+                relative_path = os.path.relpath(
+                    os.path.join(root, file), mods_down_path
+                )
                 manual_files.append(relative_path)
 
         # Ensure mod_files has the path with subdirectory when extending
