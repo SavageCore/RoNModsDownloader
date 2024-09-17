@@ -1,3 +1,4 @@
+import argparse
 import curses
 import hashlib
 import os
@@ -7,6 +8,7 @@ import zipfile
 import zlib
 
 import requests
+from packaging.version import parse as parse_version
 from tqdm import tqdm
 
 from helpers.config import (
@@ -16,7 +18,13 @@ from helpers.config import (
     save_config,
 )
 from helpers.github import auto_update
-from helpers.modio import get_subscriptions, update_subscriptions_config
+from helpers.modio import (
+    get_subscriptions,
+    subscribe_to_mod,
+    unsubscribe_from_mod,
+    update_subscriptions_config,
+)
+from helpers.modpack import download_folder
 from helpers.print_colored import (
     CYAN,
     GREEN,
@@ -36,10 +44,32 @@ print("\033[H\033[J")
 print_colored_bold(f"\nRoN Mods Downloader ({CURRENT_VERSION})", GREEN)
 print("-" * 40)
 
-skip_download = False
+parser = argparse.ArgumentParser(description="RoN Mods Downloader")
+parser.add_argument(
+    "--skip-download",
+    action="store_true",
+    help="Skip downloading mods after checking for updates",
+    default=False,
+)
+parser.add_argument(
+    "--purge",
+    action="store_true",
+    help="Skip downloading mods after checking for updates",
+    default=False,
+)
+args = parser.parse_args()
 
-if len(sys.argv) > 1 and sys.argv[1] == "--skip-download":
-    skip_download = True
+skip_download = args.skip_download
+
+# If --purge is passed as an argument, remove all mods
+if args.purge:
+    print_colored("Purging mods...", CYAN)
+    # Remove mods/
+    if os.path.exists("mods"):
+        shutil.rmtree("mods")
+
+        # Recreate mods/ directory
+        os.makedirs("mods", exist_ok=True)
 
 
 def get_md5(file_path):
@@ -193,7 +223,8 @@ def remove_unsubscribed_mods():
     """
     Remove any mods that are no longer subscribed to.
     """
-    if not config["subscribed_mods"]:
+    # If subscribed_mods is not in the config file, return
+    if "subscribed_mods" not in config:
         return
 
     for sub in config["subscribed_mods"].values():
@@ -598,15 +629,107 @@ token = get_oauth_token()
 print_colored("Checking for downloader updates...", CYAN)
 auto_update(REPO, CURRENT_VERSION, APP_PATH, config)
 
+if "mod_pack_url" not in config:
+    mod_pack_url = input("Enter the URL of the mod pack (Leave blank to not use one): ")
+    config["mod_pack_url"] = mod_pack_url or False
+    save_config(config)
+
+
+if "mod_pack_url" in config:
+    print_colored("Checking for mod pack updates...\n", CYAN)
+    # If mod_pack_version is not in config, set it to 0.0.0
+    if "mod_pack_version" not in config:
+        config["mod_pack_version"] = "0.0.0"
+
+    # Check if the mod pack version is different from the current version
+    existing = parse_version(config["mod_pack_version"])
+
+    # Get the latest release from the mod pack URL
+    # config["mod_pack_url"]/rmd.pack
+    response = requests.get(f"{config['mod_pack_url']}/rmd.pack")
+
+    if response.status_code == 200:
+        json_data = response.json()
+        latest = parse_version(json_data["version"])
+
+        # If the latest version is greater than the existing version, download the mod pack
+        # Also download if the local mods directory is empty
+        if latest > existing or not os.listdir(mods_down_path):
+            print_colored(
+                f"New mod pack version available: {latest} (Current: {existing}). Downloading...\n",
+                YELLOW,
+            )
+
+            # Update subscriptions
+            # Example of json_data:
+            # {
+            #   "https://mod.io/g/readyornot/m/fairfax-residence-remake",
+            #   "https://mod.io/g/readyornot/m/lustful-remorse",
+            # }
+            # lustful-remorse is the mod_id
+            pack_subscriptions = json_data["subscriptions"]
+            subscriptions = get_subscriptions()
+
+            # For each subscription, check if it is already subscribed to
+            for sub in pack_subscriptions:
+                mod_id = sub.split("/")[-1]
+                if mod_id not in [s["name_id"] for s in subscriptions]:
+                    # Subscribe to the mod
+                    if not subscribe_to_mod(mod_id):
+                        print_colored(f"    Failed to subscribe to {mod_id}", RED)
+                        print("")
+
+            # Download the mod folders
+            # config['mod_pack_url']}/mods/_collections
+            # config['mod_pack_url']}/mods/_manual
+            # config['mod_pack_url']}/mods/_overrides
+
+            # Download the collections
+            collections_path = os.path.join(mods_down_path, "_collections")
+            if not os.path.exists(collections_path):
+                os.makedirs(collections_path, exist_ok=True)
+
+            collections_url = f"{config['mod_pack_url']}/mods/_collections/"
+            download_folder(collections_url, collections_path)
+
+            # Download the manual mods
+            manual_path = os.path.join(mods_down_path, "_manual")
+            if not os.path.exists(manual_path):
+                os.makedirs(manual_path, exist_ok=True)
+
+            manual_url = f"{config['mod_pack_url']}/mods/_manual/"
+            download_folder(manual_url, manual_path)
+
+            # Download the overrides
+            overrides_path = os.path.join(mods_down_path, "_overrides")
+            if not os.path.exists(overrides_path):
+                os.makedirs(overrides_path, exist_ok=True)
+
+            overrides_url = f"{config['mod_pack_url']}/mods/_overrides/"
+            download_folder(overrides_url, overrides_path)
+
+            # Update the mod pack version in the config file
+            config["mod_pack_version"] = str(latest)
+            save_config(config)
+
+            print_colored("\nMod pack updated successfully.\n", GREEN)
+
+        else:
+            print_colored("No new mod pack updates found.\n", GREEN)
+
+    else:
+        print_colored("Failed to check for mod pack updates.\n", RED)
+
+
 subscriptions = get_subscriptions()
 
-# Remove any files that are no longer subscribed to)
+# Remove any files that are no longer subscribed to
 remove_unsubscribed_mods()
 config = update_subscriptions_config(subscriptions)
 
 if not skip_download:
     # Download new mods, checking if they are already downloaded
-    print_colored("Downloading mods...", CYAN)
+    print_colored("Downloading mods from mod.io...", CYAN)
     print("")
     for sub in subscriptions:
         mod_id = sub["name_id"]
