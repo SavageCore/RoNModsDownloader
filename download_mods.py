@@ -21,7 +21,6 @@ from helpers.github import auto_update
 from helpers.modio import (
     get_subscriptions,
     subscribe_to_mod,
-    unsubscribe_from_mod,
     update_subscriptions_config,
 )
 from helpers.modpack import download_folder
@@ -645,12 +644,11 @@ if "mod_pack_url" in config:
     existing = parse_version(config["mod_pack_version"])
 
     # Get the latest release from the mod pack URL
-    # config["mod_pack_url"]/rmd.pack
     response = requests.get(f"{config['mod_pack_url']}/rmd.pack")
 
     if response.status_code == 200:
-        json_data = response.json()
-        latest = parse_version(json_data["version"])
+        mp_json_data = response.json()
+        latest = parse_version(mp_json_data["version"])
 
         # If the latest version is greater than the existing version, download the mod pack
         # Also download if the local mods directory is empty
@@ -667,7 +665,7 @@ if "mod_pack_url" in config:
             #   "https://mod.io/g/readyornot/m/lustful-remorse",
             # }
             # lustful-remorse is the mod_id
-            pack_subscriptions = json_data["subscriptions"]
+            pack_subscriptions = mp_json_data["subscriptions"]
             subscriptions = get_subscriptions()
 
             # For each subscription, check if it is already subscribed to
@@ -757,6 +755,10 @@ if not os.path.exists(collections_path):
 # Get the list of collections
 collections = os.listdir(collections_path)
 
+# Ensure "collections" key exists in the config
+if "collections" not in config:
+    config["collections"] = {}
+
 # Iterate through the collections
 for collection in collections:
     # Ignore .gitkeep files
@@ -766,21 +768,22 @@ for collection in collections:
     # Get the list of mods in the collection
     collection_mods = os.listdir(os.path.join(collections_path, collection))
 
-    # If "collection" is not in the config file, add it
-    if "collections" not in config:
-        config["collections"] = {}
-
     # Check if the collection is in the config file, if not add it
     if collection not in config["collections"]:
         config["collections"][collection] = {"enabled": False, "mods": []}
 
-    # Add the mods to the collection in the config file
+    # Ensure the enabled key matches the mod pack
+    if "mod_pack_url" in config:
+        collections_data = mp_json_data["collections"]
+        config["collections"][collection]["enabled"] = collections_data[collection][
+            "enabled"
+        ]
+
+    # Add the mods to the collection
     for mod in collection_mods:
         if mod not in config["collections"][collection]["mods"]:
             config["collections"][collection]["mods"].append(mod)
 
-if "collections" not in config:
-    config["collections"] = {}
 
 # Update the config file
 save_config(config)
