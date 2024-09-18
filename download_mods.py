@@ -644,10 +644,17 @@ if "mod_pack_url" in config:
     # Check if the mod pack version is different from the current version
     existing = parse_version(config["mod_pack_version"])
 
-    # Get the latest release from the mod pack URL
-    response = requests.get(f"{config['mod_pack_url']}/rmd.pack")
+    modPackValid = True
+    response = None
 
-    if response.status_code == 200:
+    # Get the latest release from the mod pack URL
+    try:
+        response = requests.get(f"{config['mod_pack_url']}/rmd.pack")
+    except requests.exceptions.RequestException as e:
+        print_colored(f"Failed to check for mod pack updates: {e}", RED)
+        modPackValid = False
+
+    if response and response.status_code == 200:
         mp_json_data = response.json()
         latest = parse_version(mp_json_data["version"])
 
@@ -715,9 +722,8 @@ if "mod_pack_url" in config:
 
         else:
             print_colored("No new mod pack updates found.\n", GREEN)
-
     else:
-        print_colored("Failed to check for mod pack updates.\n", RED)
+        modPackValid = False
 
 
 subscriptions = get_subscriptions()
@@ -774,7 +780,7 @@ for collection in collections:
         config["collections"][collection] = {"enabled": False, "mods": []}
 
     # Ensure the enabled key matches the mod pack
-    if "mod_pack_url" in config:
+    if "mod_pack_url" in config and modPackValid:
         collections_data = mp_json_data["collections"]
         config["collections"][collection]["enabled"] = collections_data[collection][
             "enabled"
