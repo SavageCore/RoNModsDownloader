@@ -302,6 +302,7 @@ def display_menu():
 
     mods_installed = len(existing_mods)
 
+    print("\033[H\033[J")
     print("")
     print_colored_bold("Menu", WHITE)
     print("-" * 40)
