@@ -340,7 +340,12 @@ def view_collections(collections):
             if row >= max_y - 1:
                 break  # Prevent writing outside the terminal window
 
-            collection_text = f"{collection}: [{collections[collection]['enabled']}]"
+            collection_text = f"{collection}:"
+            enabled_text = (
+                "Enabled" if collections[collection]["enabled"] else "Disabled"
+            )
+            collection_text += f" [{enabled_text}]"
+
             if len(collection_text) > max_x - 1:
                 collection_text = collection_text[: max_x - 4] + "..."
 
@@ -352,7 +357,7 @@ def view_collections(collections):
                 stdscr.addstr(row, 0, collection_text)
             row += 1
 
-        # Add return to menu option
+        # Info bar
         stdscr.addstr(
             max_y - 1,
             0,
