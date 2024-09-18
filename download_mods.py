@@ -311,7 +311,8 @@ def display_menu():
         print("1. Install Mods")
     print("2. Uninstall Mods")
     print("3. View Collections")
-    print("4. Exit")
+    print("4. Set mod pack URL")
+    print("5. Exit")
 
 
 def view_collections(collections):
@@ -814,6 +815,12 @@ while True:
         view_collections(collections)
         mod_files = gather_mods(mods_down_path)
     elif choice == "4":
+        print("\033[H\033[J")
+        mod_pack_url = input("Enter the URL of the mod pack: ")
+        config["mod_pack_url"] = mod_pack_url
+        save_config(config)
+        print("\033[H\033[J")
+    elif choice == "5":
         break
     else:
         print("\033[H\033[J")
