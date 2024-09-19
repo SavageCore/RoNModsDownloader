@@ -788,9 +788,10 @@ for collection in collections:
     # Ensure the enabled key matches the mod pack
     if "mod_pack_url" in config and modPackValid:
         collections_data = mp_json_data["collections"]
-        config["collections"][collection]["enabled"] = collections_data[collection][
-            "enabled"
-        ]
+        if collection in collections_data:
+            config["collections"][collection]["enabled"] = collections_data[collection][
+                "enabled"
+            ]
 
     # Add the mods to the collection
     for mod in collection_mods:
