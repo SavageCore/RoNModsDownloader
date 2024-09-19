@@ -276,6 +276,7 @@ def get_mod_files(mods_down_path):
 
 def display_menu():
     print_colored("Loading mods...", CYAN)
+    mod_files = get_mod_files(mods_down_path)
     existing_mods = os.listdir(mods_dest_path)
     mods_match_status = mods_match(mod_files, mods_dest_path)
     # Get the number of mods to install not including WorldGen or gitkeep files
