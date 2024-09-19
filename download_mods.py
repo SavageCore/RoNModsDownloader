@@ -815,7 +815,7 @@ if not mod_files:
 # Add a menu to choose whether to install or uninstall mods
 while True:
     display_menu()
-    choice = input("Enter your choice: ")
+    choice = input("\nEnter your choice [and press enter]: ")
 
     if choice == "1":
         print("\033[H\033[J")
