@@ -2,7 +2,7 @@ vdf==3.4
 requests==2.32.3
 tqdm==4.66.5
 pyinstaller==6.10.0
-black===24.8.0
+black===24.10.0
 semver===3.0.2
 psutil===6.0.0
 windows-curses===2.3.3
