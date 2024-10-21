@@ -799,6 +799,12 @@ for collection in collections:
         if mod not in config["collections"][collection]["mods"]:
             config["collections"][collection]["mods"].append(mod)
 
+    # Remove any mods from the collection if the file no longer exists
+    for mod in config["collections"][collection]["mods"]:
+        if mod not in collection_mods:
+            config["collections"][collection]["mods"].remove(mod)
+
+
 
 # Update the config file
 save_config(config)
