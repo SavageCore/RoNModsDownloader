@@ -688,9 +688,11 @@ if "mod_pack_url" in config:
                 mod_id = sub.split("/")[-1]
                 if mod_id not in [s["name_id"] for s in subscriptions]:
                     # Subscribe to the mod
-                    if not subscribe_to_mod(mod_id):
+                    subscribed = subscribe_to_mod(mod_id)
+                    if not subscribed:
                         print_colored(f"    Failed to subscribe to {mod_id}", RED)
                         print("")
+                        sys.exit()
 
             # Download the mod folders
             # config['mod_pack_url']}/mods/_collections

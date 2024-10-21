@@ -56,13 +56,16 @@ def subscribe_to_mod(mod_id):
 
     try:
         response = requests.post(
-            f"{MODIO_API_URL}/games/@readyornot/mods/@${mod_id}",
+            f"{MODIO_API_URL}/games/@readyornot/mods/@{mod_id}/subscribe",
             headers={
                 "Authorization": f"Bearer {oauth_token}",
                 "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json",
             },
         )
         response.raise_for_status()
+
+        print(response.json())
     except requests.exceptions.HTTPError as http_err:
         if response.status_code == 401:
             print("")
@@ -93,7 +96,7 @@ def unsubscribe_from_mod(mod_id):
 
     try:
         response = requests.delete(
-            f"{MODIO_API_URL}/games/@readyornot/mods/@${mod_id}",
+            f"{MODIO_API_URL}/games/@readyornot/mods/@${mod_id}/subscribe",
             headers={
                 "Authorization": f"Bearer {oauth_token}",
                 "Content-Type": "application/x-www-form-urlencoded",
