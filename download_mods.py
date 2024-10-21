@@ -707,6 +707,36 @@ if "mod_pack_url" in config:
             collections_url = f"{config['mod_pack_url']}/mods/_collections/"
             download_folder(collections_url, collections_path)
 
+            # # Create a list of collections to delete
+            # collections_to_delete = [collection for collection in config["collections"] if collection not in mp_json_data["collections"]]
+
+            # # Delete the collections from the config file
+            # for collection in collections_to_delete:
+            #     del config["collections"][collection]
+
+            # Compare mp_json_data with config["collections"], ensure the files are the same
+            for collection in mp_json_data["collections"]:
+                # Check if the collection is in the config file, if not add it
+                if collection not in config["collections"]:
+                    config["collections"][collection] = {"enabled": False, "mods": []}
+
+                    # Ensure the enabled key matches the mod pack
+                    if collection in mp_json_data["collections"]:
+                        config["collections"][collection]["enabled"] = mp_json_data[
+                            "collections"
+                        ][collection]["enabled"]
+
+                    # Add the mods to the collection
+                    for mod in mp_json_data["collections"][collection]["mods"]:
+                        if mod not in config["collections"][collection]["mods"]:
+                            config["collections"][collection]["mods"].append(mod)
+                else:
+                    # Remove any mods from the collection if the file no longer exists
+                    for mod in config["collections"][collection]["mods"]:
+                        if mod not in mp_json_data["collections"][collection]["mods"]:
+                            config["collections"][collection]["mods"].remove(mod)
+
+
             # Download the manual mods
             manual_path = os.path.join(mods_down_path, "_manual")
             if not os.path.exists(manual_path):
