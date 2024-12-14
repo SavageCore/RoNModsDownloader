@@ -1,3 +1,4 @@
+import argparse
 import curses
 import hashlib
 import os
@@ -7,6 +8,7 @@ import zipfile
 import zlib
 
 import requests
+from packaging.version import parse as parse_version
 from tqdm import tqdm
 
 from helpers.config import (
@@ -16,7 +18,13 @@ from helpers.config import (
     save_config,
 )
 from helpers.github import auto_update
-from helpers.modio import get_subscriptions, update_subscriptions_config
+from helpers.modio import (
+    get_subscriptions,
+    subscribe_to_mod,
+    update_subscriptions_config,
+    unsubscribe_from_mod,
+)
+from helpers.modpack import download_folder, list_folder
 from helpers.print_colored import (
     CYAN,
     GREEN,
@@ -36,10 +44,37 @@ print("\033[H\033[J")
 print_colored_bold(f"\nRoN Mods Downloader ({CURRENT_VERSION})", GREEN)
 print("-" * 40)
 
-skip_download = False
+parser = argparse.ArgumentParser(description="RoN Mods Downloader")
+parser.add_argument(
+    "--skip-download",
+    action="store_true",
+    help="Skip downloading mods after checking for updates",
+    default=False,
+)
+parser.add_argument(
+    "--purge",
+    action="store_true",
+    help="Skip downloading mods after checking for updates",
+    default=False,
+)
+args = parser.parse_args()
 
-if len(sys.argv) > 1 and sys.argv[1] == "--skip-download":
-    skip_download = True
+skip_download = args.skip_download
+
+# If --purge is passed as an argument, remove all mods
+if args.purge:
+    print_colored("Purging mods...", CYAN)
+    # Remove mods/
+    if os.path.exists("mods"):
+        shutil.rmtree("mods")
+
+        # Recreate mods/ directory
+        os.makedirs("mods", exist_ok=True)
+
+
+# Normalize paths to ensure consistency
+def normalize_path(path):
+    return os.path.normpath(path).replace("\\", "/")
 
 
 def get_md5(file_path):
@@ -193,7 +228,8 @@ def remove_unsubscribed_mods():
     """
     Remove any mods that are no longer subscribed to.
     """
-    if not config["subscribed_mods"]:
+    # If subscribed_mods is not in the config file, return
+    if "subscribed_mods" not in config:
         return
 
     for sub in config["subscribed_mods"].values():
@@ -246,12 +282,16 @@ def get_mod_files(mods_down_path):
 
 def display_menu():
     print_colored("Loading mods...", CYAN)
+    mod_files = get_mod_files(mods_down_path)
     existing_mods = os.listdir(mods_dest_path)
     mods_match_status = mods_match(mod_files, mods_dest_path)
     # Get the number of mods to install not including WorldGen or gitkeep files
     mods_quantity = 0
     for mod_file in mod_files:
         if ".gitkeep" in mod_file:
+            continue
+
+        if "rmd.pack" in mod_file:
             continue
 
         if "WorldGen" in mod_file:
@@ -272,6 +312,7 @@ def display_menu():
 
     mods_installed = len(existing_mods)
 
+    print("\033[H\033[J")
     print("")
     print_colored_bold("Menu", WHITE)
     print("-" * 40)
@@ -281,7 +322,8 @@ def display_menu():
         print("1. Install Mods")
     print("2. Uninstall Mods")
     print("3. View Collections")
-    print("4. Exit")
+    print("4. Set mod pack URL")
+    print("5. Exit")
 
 
 def view_collections(collections):
@@ -308,7 +350,12 @@ def view_collections(collections):
             if row >= max_y - 1:
                 break  # Prevent writing outside the terminal window
 
-            collection_text = f"{collection}: [{collections[collection]['enabled']}]"
+            collection_text = f"{collection}:"
+            enabled_text = (
+                "Enabled" if collections[collection]["enabled"] else "Disabled"
+            )
+            collection_text += f" [{enabled_text}]"
+
             if len(collection_text) > max_x - 1:
                 collection_text = collection_text[: max_x - 4] + "..."
 
@@ -320,7 +367,7 @@ def view_collections(collections):
                 stdscr.addstr(row, 0, collection_text)
             row += 1
 
-        # Add return to menu option
+        # Info bar
         stdscr.addstr(
             max_y - 1,
             0,
@@ -437,6 +484,9 @@ def install_mods(mod_files, mods_dest_path, mods_down_path):
 
         # Skip .gitkeep files and also _manual\.gitkeep files
         if ".gitkeep" in mod_file:
+            continue
+
+        if "rmd.pack" in mod_file:
             continue
 
         print_colored_bold(f" {mod_file}", WHITE)
@@ -598,15 +648,176 @@ token = get_oauth_token()
 print_colored("Checking for downloader updates...", CYAN)
 auto_update(REPO, CURRENT_VERSION, APP_PATH, config)
 
+if "mod_pack_url" not in config:
+    mod_pack_url = input("Enter the URL of the mod pack (Leave blank to not use one): ")
+    config["mod_pack_url"] = mod_pack_url or False
+    save_config(config)
+
+
+if "mod_pack_url" in config:
+    print_colored("Checking for mod pack updates...\n", CYAN)
+    # If mod_pack_version is not in config, set it to 0.0.0
+    if "mod_pack_version" not in config:
+        config["mod_pack_version"] = "0.0.0"
+
+    # Check if the mod pack version is different from the current version
+    existing = parse_version(config["mod_pack_version"])
+
+    modPackValid = True
+    response = None
+
+    # Get the latest release from the mod pack URL
+    try:
+        response = requests.get(f"{config['mod_pack_url']}/rmd.pack")
+    except requests.exceptions.RequestException as e:
+        print_colored(f"Failed to check for mod pack updates: {e}", RED)
+        modPackValid = False
+
+    if response and response.status_code == 200:
+        mp_json_data = response.json()
+        latest = parse_version(mp_json_data["version"])
+
+        # If the latest version is greater than the existing version, download the mod pack
+        # Also download if the local mods directory is empty
+        if latest > existing or not os.listdir(mods_down_path):
+            print_colored(
+                f"New mod pack version available: {latest} (Current: {existing}). Downloading...\n",
+                YELLOW,
+            )
+
+            # Update subscriptions
+            # Example of json_data:
+            # {
+            #   "https://mod.io/g/readyornot/m/fairfax-residence-remake",
+            #   "https://mod.io/g/readyornot/m/lustful-remorse",
+            # }
+            # lustful-remorse is the mod_id
+            pack_subscriptions = mp_json_data["subscriptions"]
+            subscriptions = get_subscriptions()
+
+            # For each subscription, check if it is already subscribed to
+            for sub in pack_subscriptions:
+                mod_id = sub.split("/")[-1]
+                if mod_id not in [s["name_id"] for s in subscriptions]:
+                    # Subscribe to the mod
+                    subscribed = subscribe_to_mod(mod_id)
+                    if not subscribed:
+                        print_colored(f"    Failed to subscribe to {mod_id}", RED)
+                        print("")
+                        sys.exit()
+
+            # Unsubscribe from any mods that are not in the mod pack
+            for sub in subscriptions:
+                mod_id = sub["name_id"]
+                if mod_id not in [url.split("/")[-1] for url in pack_subscriptions]:
+                    unsubscribed = unsubscribe_from_mod(mod_id)
+                    if not unsubscribed:
+                        print_colored(f"    Failed to unsubscribe from {mod_id}", RED)
+                        print("")
+                        sys.exit()
+
+            # Download the mod folders
+            # config['mod_pack_url']}/mods/_collections
+            # config['mod_pack_url']}/mods/_manual
+            # config['mod_pack_url']}/mods/_overrides
+
+            # Download the collections
+            collections_path = os.path.join(mods_down_path, "_collections")
+            if not os.path.exists(collections_path):
+                os.makedirs(collections_path, exist_ok=True)
+
+            collections_url = f"{config['mod_pack_url']}/mods/_collections/"
+            download_folder(collections_url, collections_path)
+
+            # Create a list of collections to delete
+            collections_to_delete = [
+                collection
+                for collection in config["collections"]
+                if collection not in mp_json_data["collections"]
+            ]
+
+            # Delete the collections from the config file
+            for collection in collections_to_delete:
+                del config["collections"][collection]
+
+                # Remove the collection folder
+                collection_path = os.path.join(collections_path, collection)
+                if os.path.exists(collection_path):
+                    shutil.rmtree(collection_path)
+
+            # Compare mp_json_data with config["collections"], ensure the files are the same
+            for collection in mp_json_data["collections"]:
+                # Check if the collection is in the config file, if not add it
+                if collection not in config["collections"]:
+                    config["collections"][collection] = {"enabled": False, "mods": []}
+
+                    # Ensure the enabled key matches the mod pack
+                    if collection in mp_json_data["collections"]:
+                        config["collections"][collection]["enabled"] = mp_json_data[
+                            "collections"
+                        ][collection]["enabled"]
+
+                    # Add the mods to the collection
+                    for mod in mp_json_data["collections"][collection]["mods"]:
+                        if mod not in config["collections"][collection]["mods"]:
+                            config["collections"][collection]["mods"].append(mod)
+                else:
+                    # Remove any mods from the collection if the file no longer exists
+                    for mod in config["collections"][collection]["mods"]:
+                        if mod not in mp_json_data["collections"][collection]["mods"]:
+                            config["collections"][collection]["mods"].remove(mod)
+
+            # Download the manual mods
+            manual_path = os.path.join(mods_down_path, "_manual")
+            if not os.path.exists(manual_path):
+                os.makedirs(manual_path, exist_ok=True)
+
+            manual_url = f"{config['mod_pack_url']}/mods/_manual/"
+            mod_pack_files = list_folder(manual_url)
+            download_folder(manual_url, manual_path)
+
+            # Remove any manual mods that are no longer in the mod pack
+            for root, dirs, files in os.walk(manual_path):
+                for mod in files:
+                    mod_path = os.path.join(root, mod)
+                    relative_mod_path = os.path.relpath(mod_path, manual_path)
+                    normalized_mod_path = normalize_path(
+                        "mods/_manual/" + relative_mod_path
+                    )
+                    # print(f"Checking {normalized_mod_path}")
+                    if normalized_mod_path not in mod_pack_files:
+                        # print(f"Removing {mod_path}")
+                        os.remove(mod_path)
+
+            # Download the overrides
+            overrides_path = os.path.join(mods_down_path, "_overrides")
+            if not os.path.exists(overrides_path):
+                os.makedirs(overrides_path, exist_ok=True)
+
+            overrides_url = f"{config['mod_pack_url']}/mods/_overrides/"
+            download_folder(overrides_url, overrides_path)
+
+            # Update the mod pack version in the config file
+            config["mod_pack_version"] = str(latest)
+            save_config(config)
+
+            print_colored("\nMod pack updated successfully.\n", GREEN)
+
+        else:
+            print_colored("No new mod pack updates found.\n", GREEN)
+    else:
+        modPackValid = False
+
+
 subscriptions = get_subscriptions()
 
-# Remove any files that are no longer subscribed to)
+# Remove any files that are no longer subscribed to
 remove_unsubscribed_mods()
 config = update_subscriptions_config(subscriptions)
 
 if not skip_download:
     # Download new mods, checking if they are already downloaded
-    print_colored("Downloading mods...", CYAN)
+    print_colored("Downloading mods from mod.io...", CYAN)
     print("")
     for sub in subscriptions:
         mod_id = sub["name_id"]
@@ -634,6 +845,10 @@ if not os.path.exists(collections_path):
 # Get the list of collections
 collections = os.listdir(collections_path)
 
+# Ensure "collections" key exists in the config
+if "collections" not in config:
+    config["collections"] = {}
+
 # Iterate through the collections
 for collection in collections:
     # Ignore .gitkeep files
@@ -643,21 +858,28 @@ for collection in collections:
     # Get the list of mods in the collection
     collection_mods = os.listdir(os.path.join(collections_path, collection))
 
-    # If "collection" is not in the config file, add it
-    if "collections" not in config:
-        config["collections"] = {}
-
     # Check if the collection is in the config file, if not add it
     if collection not in config["collections"]:
         config["collections"][collection] = {"enabled": False, "mods": []}
 
-    # Add the mods to the collection in the config file
+    # Ensure the enabled key matches the mod pack
+    if "mod_pack_url" in config and modPackValid:
+        collections_data = mp_json_data["collections"]
+        if collection in collections_data:
+            config["collections"][collection]["enabled"] = collections_data[collection][
+                "enabled"
+            ]
+
+    # Add the mods to the collection
     for mod in collection_mods:
         if mod not in config["collections"][collection]["mods"]:
             config["collections"][collection]["mods"].append(mod)
 
-if "collections" not in config:
-    config["collections"] = {}
+    # Remove any mods from the collection if the file no longer exists
+    for mod in config["collections"][collection]["mods"]:
+        if mod not in collection_mods:
+            config["collections"][collection]["mods"].remove(mod)
+
 
 # Update the config file
 save_config(config)
@@ -675,7 +897,7 @@ if not mod_files:
 # Add a menu to choose whether to install or uninstall mods
 while True:
     display_menu()
-    choice = input("Enter your choice: ")
+    choice = input("\nEnter your choice [and press enter]: ")
 
     if choice == "1":
         print("\033[H\033[J")
@@ -688,6 +910,22 @@ while True:
         view_collections(collections)
         mod_files = gather_mods(mods_down_path)
     elif choice == "4":
+        print("\033[H\033[J")
+        mod_pack_url = input("Enter the URL of the mod pack: ")
+        config["mod_pack_url"] = mod_pack_url
+        save_config(config)
+
+        # Uninstall all mods ready for the new mod pack
+        uninstall_mods(mods_dest_path, mods_down_path, game_path)
+
+        # Remove local mods
+        shutil.rmtree(mods_down_path)
+
+        # Press any button to quit
+        print("Press any key to quit (then restart afterwards)...")
+        input()
+        break
+    elif choice == "5":
         break
     else:
         print("\033[H\033[J")
