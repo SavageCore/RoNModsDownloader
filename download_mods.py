@@ -653,8 +653,7 @@ if "mod_pack_url" not in config:
     config["mod_pack_url"] = mod_pack_url or False
     save_config(config)
 
-
-if "mod_pack_url" in config:
+if config["mod_pack_url"]:
     print_colored("Checking for mod pack updates...\n", CYAN)
     # If mod_pack_version is not in config, set it to 0.0.0
     if "mod_pack_version" not in config:
@@ -863,7 +862,7 @@ for collection in collections:
         config["collections"][collection] = {"enabled": False, "mods": []}
 
     # Ensure the enabled key matches the mod pack
-    if "mod_pack_url" in config and modPackValid:
+    if config["mod_pack_url"] and modPackValid:
         collections_data = mp_json_data["collections"]
         if collection in collections_data:
             config["collections"][collection]["enabled"] = collections_data[collection][
