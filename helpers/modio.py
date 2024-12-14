@@ -43,6 +43,97 @@ def get_subscriptions():
     return subscriptions
 
 
+def subscribe_to_mod(mod_id):
+    """
+    Subscribes to a mod on mod.io.
+
+    Parameters
+    ----------
+    mod_id : string
+        The ID of the mod to subscribe to.
+
+    Returns
+    -------
+    bool
+        True if the subscription was successful, False otherwise.
+    """
+    oauth_token = get_oauth_token()
+
+    try:
+        response = requests.post(
+            f"{MODIO_API_URL}/games/@readyornot/mods/@{mod_id}/subscribe",
+            headers={
+                "Authorization": f"Bearer {oauth_token}",
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json",
+            },
+        )
+        response.raise_for_status()
+        return True
+    except requests.exceptions.HTTPError as http_err:
+        if response.status_code == 401:
+            print("")
+            print(
+                "Unauthorized access. Please update your token and make sure it has write access."
+            )
+            update_oauth_token()
+            # Clear the screen
+            print("\033[H\033[J")
+            # Retry the request
+            return subscribe_to_mod(mod_id)
+        else:
+            print(f"HTTP error occurred: {http_err}")
+    except Exception as err:
+        print(f"An error occurred: {err}")
+
+    return False
+
+
+def unsubscribe_from_mod(mod_id):
+    """
+    Unsubscribes from a mod on mod.io.
+
+    Parameters
+    ----------
+    mod_id : string
+        The ID of the mod to unsubscribe from.
+
+    Returns
+    -------
+    bool
+        True if the unsubscription was successful, False otherwise.
+    """
+    oauth_token = get_oauth_token()
+
+    try:
+        response = requests.delete(
+            f"{MODIO_API_URL}/games/@readyornot/mods/@{mod_id}/subscribe",
+            headers={
+                "Authorization": f"Bearer {oauth_token}",
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+        )
+        response.raise_for_status()
+        return True
+    except requests.exceptions.HTTPError as http_err:
+        if response.status_code == 401:
+            print("")
+            print(
+                "Unauthorized access. Please update your token and make sure it has write access."
+            )
+            update_oauth_token()
+            # Clear the screen
+            print("\033[H\033[J")
+            # Retry the request
+            return unsubscribe_from_mod(mod_id)
+        else:
+            print(f"HTTP error occurred: {http_err}")
+    except Exception as err:
+        print(f"An error occurred: {err}")
+
+    return False
+
+
 def update_subscriptions_config(subscriptions):
     """
     Updates the configuration file with the subscribed mods.
