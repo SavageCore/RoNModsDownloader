@@ -684,14 +684,6 @@ if config["mod_pack_url"]:
                 YELLOW,
             )
 
-            # Uninstall mods
-            uninstall_mods(mods_dest_path, mods_down_path, game_path)
-
-            # Remove any existing mods
-            if os.listdir(mods_down_path):
-                shutil.rmtree(mods_down_path)
-                os.makedirs(mods_down_path, exist_ok=True)
-
             # Update subscriptions
             # Example of json_data:
             # {
