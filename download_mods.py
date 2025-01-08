@@ -912,6 +912,7 @@ while True:
         print("\033[H\033[J")
         mod_pack_url = input("Enter the URL of the mod pack: ")
         config["mod_pack_url"] = mod_pack_url
+        config["mod_pack_version"] = "0.0.0"
         save_config(config)
 
         # Uninstall all mods ready for the new mod pack
