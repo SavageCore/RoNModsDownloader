@@ -614,6 +614,19 @@ def mods_match(mod_files, mods_dest_path):
     return True
 
 
+def is_valid_mod_pack_url(url):
+    """Check if the mod pack url is valid."""
+    try:
+        response = requests.get(f"{url}/rmd.pack")
+        if response.status_code == 200:
+            return True
+        else:
+            return False
+    except requests.exceptions.RequestException as e:
+        print_colored(f"Failed to get mod pack file: {e}", RED)
+        return False
+
+
 # Get game install path
 game_path = get_game_install_path("1144200")
 if not game_path:
@@ -911,6 +924,13 @@ while True:
     elif choice == "4":
         print("\033[H\033[J")
         mod_pack_url = input("Enter the URL of the mod pack: ")
+
+        if is_valid_mod_pack_url(mod_pack_url):
+            print_colored("Valid mod pack URL, updating config...", GREEN)
+        else:
+            print_colored("Invalid mod pack URL, please try again.", RED)
+            continue
+
         config["mod_pack_url"] = mod_pack_url
         config["mod_pack_version"] = "0.0.0"
         save_config(config)
