@@ -7,4 +7,4 @@ semver===3.0.2
 psutil===6.1.1
 windows-curses===2.4.0
 packaging==24.2
-beautifulsoup4==4.12.3
+beautifulsoup4==4.13.0
