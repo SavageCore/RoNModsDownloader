@@ -788,19 +788,6 @@ if config["mod_pack_url"]:
             mod_pack_files = list_folder(manual_url)
             download_folder(manual_url, manual_path)
 
-            # Remove any manual mods that are no longer in the mod pack
-            for root, dirs, files in os.walk(manual_path):
-                for mod in files:
-                    mod_path = os.path.join(root, mod)
-                    relative_mod_path = os.path.relpath(mod_path, manual_path)
-                    normalized_mod_path = normalize_path(
-                        "mods/_manual/" + relative_mod_path
-                    )
-                    # print(f"Checking {normalized_mod_path}")
-                    if normalized_mod_path not in mod_pack_files:
-                        # print(f"Removing {mod_path}")
-                        os.remove(mod_path)
-
             # Download the overrides
             overrides_path = os.path.join(mods_down_path, "_overrides")
             if not os.path.exists(overrides_path):
@@ -817,6 +804,22 @@ if config["mod_pack_url"]:
 
         else:
             print_colored("No new mod pack updates found.\n", GREEN)
+
+        manual_path = os.path.join(mods_down_path, "_manual")
+        manual_url = f"{config['mod_pack_url']}/mods/_manual/"
+        mod_pack_files = list_folder(manual_url)
+        # Remove any manual mods that are no longer in the mod pack
+        for root, dirs, files in os.walk(manual_path):
+            for mod in files:
+                mod_path = os.path.join(root, mod)
+                relative_mod_path = os.path.relpath(mod_path, manual_path)
+                normalized_mod_path = normalize_path(
+                    "mods/_manual/" + relative_mod_path
+                )
+                # print(f"Checking {normalized_mod_path}")
+                if normalized_mod_path not in mod_pack_files:
+                    # print(f"Removing {mod_path}")
+                    os.remove(mod_path)
     else:
         modPackValid = False
 
