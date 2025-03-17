@@ -831,7 +831,9 @@ if config["mod_pack_url"]:
                                 for entry in zip_ref.infolist():
                                     if entry.is_dir():
                                         continue
-                                    mod_path = os.path.join(mods_dest_path, entry.filename)
+                                    mod_path = os.path.join(
+                                        mods_dest_path, entry.filename
+                                    )
                                     if os.path.exists(mod_path):
                                         os.remove(mod_path)
                         else:
@@ -862,7 +864,9 @@ if config["mod_pack_url"]:
                                 for entry in zip_ref.infolist():
                                     if entry.is_dir():
                                         continue
-                                    mod_path = os.path.join(mods_dest_path, entry.filename)
+                                    mod_path = os.path.join(
+                                        mods_dest_path, entry.filename
+                                    )
                                     if os.path.exists(mod_path):
                                         os.remove(mod_path)
                         else:

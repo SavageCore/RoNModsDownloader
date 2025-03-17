@@ -93,7 +93,7 @@ def list_folder(url, sub_folder):
         files, folders = fetch_files_and_folders(url)
         for file in files:
             relative_file = os.path.normpath(
-                "mods/"+ sub_folder + "/" + url.replace(base_url, "") + file
+                "mods/" + sub_folder + "/" + url.replace(base_url, "") + file
             ).replace("\\", "/")
             all_files.append(relative_file)
         for folder in folders:
