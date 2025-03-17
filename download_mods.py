@@ -821,6 +821,22 @@ if config["mod_pack_url"]:
                     # print(f"Removing {mod_path}")
                     os.remove(mod_path)
 
+                    # Ensure it's removed from ~mods as well
+                    # Need to check if it's a zip file and remove the extracted files
+                    mod_path = os.path.join(mods_dest_path, mod)
+                    if os.path.exists(mod_path):
+                        print(f"  Removing {mod}")
+                        if mod.endswith(".zip"):
+                            with zipfile.ZipFile(mod_path, "r") as zip_ref:
+                                for entry in zip_ref.infolist():
+                                    if entry.is_dir():
+                                        continue
+                                    mod_path = os.path.join(mods_dest_path, entry.filename)
+                                    if os.path.exists(mod_path):
+                                        os.remove(mod_path)
+                        else:
+                            os.remove(mod_path)
+
         # Remove any collection mods that are no longer in the mod pack, unlike above the mod files are in a subdirectories
         collections_path = os.path.join(mods_down_path, "_collections")
         collections_url = f"{config['mod_pack_url']}/mods/_collections/"
@@ -836,6 +852,21 @@ if config["mod_pack_url"]:
                 if normalized_mod_path not in collection_pack_files:
                     # print(f"Removing {mod_path}")
                     os.remove(mod_path)
+
+                    # Ensure it's removed from ~mods as well
+                    mod_path = os.path.join(mods_dest_path, mod)
+                    if os.path.exists(mod_path):
+                        print(f"  Removing {mod}")
+                        if mod.endswith(".zip"):
+                            with zipfile.ZipFile(mod_path, "r") as zip_ref:
+                                for entry in zip_ref.infolist():
+                                    if entry.is_dir():
+                                        continue
+                                    mod_path = os.path.join(mods_dest_path, entry.filename)
+                                    if os.path.exists(mod_path):
+                                        os.remove(mod_path)
+                        else:
+                            os.remove(mod_path)
     else:
         modPackValid = False
 
