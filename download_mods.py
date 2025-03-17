@@ -785,7 +785,7 @@ if config["mod_pack_url"]:
                 os.makedirs(manual_path, exist_ok=True)
 
             manual_url = f"{config['mod_pack_url']}/mods/_manual/"
-            mod_pack_files = list_folder(manual_url)
+            mod_pack_files = list_folder(manual_url, "_manual")
             download_folder(manual_url, manual_path)
 
             # Download the overrides
@@ -807,7 +807,7 @@ if config["mod_pack_url"]:
 
         manual_path = os.path.join(mods_down_path, "_manual")
         manual_url = f"{config['mod_pack_url']}/mods/_manual/"
-        mod_pack_files = list_folder(manual_url)
+        mod_pack_files = list_folder(manual_url, "_manual")
         # Remove any manual mods that are no longer in the mod pack
         for root, dirs, files in os.walk(manual_path):
             for mod in files:
@@ -818,6 +818,22 @@ if config["mod_pack_url"]:
                 )
                 # print(f"Checking {normalized_mod_path}")
                 if normalized_mod_path not in mod_pack_files:
+                    # print(f"Removing {mod_path}")
+                    os.remove(mod_path)
+
+        # Remove any collection mods that are no longer in the mod pack, unlike above the mod files are in a subdirectories
+        collections_path = os.path.join(mods_down_path, "_collections")
+        collections_url = f"{config['mod_pack_url']}/mods/_collections/"
+        collection_pack_files = list_folder(collections_url, "_collections")
+        for root, dirs, files in os.walk(collections_path):
+            for mod in files:
+                mod_path = os.path.join(root, mod)
+                relative_mod_path = os.path.relpath(mod_path, collections_path)
+                normalized_mod_path = normalize_path(
+                    "mods/_collections/" + relative_mod_path
+                )
+                # print(f"Checking {normalized_mod_path}")
+                if normalized_mod_path not in collection_pack_files:
                     # print(f"Removing {mod_path}")
                     os.remove(mod_path)
     else:

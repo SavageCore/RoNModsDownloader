@@ -67,7 +67,7 @@ def download_folder(url, local_path):
                 download_file(full_url, local_file_path)
 
 
-def list_folder(url):
+def list_folder(url, sub_folder):
     """
     Lists all files and folders in an NGINX directory listing, including subfolders.
     """
@@ -88,19 +88,19 @@ def list_folder(url):
                     files.append(decoded_href)
         return files, folders
 
-    def list_all_files(url, base_url):
+    def list_all_files(url, base_url, sub_folder):
         all_files = []
         files, folders = fetch_files_and_folders(url)
         for file in files:
             relative_file = os.path.normpath(
-                "mods/_manual/" + url.replace(base_url, "") + file
+                "mods/"+ sub_folder + "/" + url.replace(base_url, "") + file
             ).replace("\\", "/")
             all_files.append(relative_file)
         for folder in folders:
             folder_url = url + folder
-            all_files.extend(list_all_files(folder_url, base_url))
+            all_files.extend(list_all_files(folder_url, base_url, sub_folder))
         return all_files
 
     base_url = url if url.endswith("/") else url + "/"
-    all_files = list_all_files(base_url, base_url)
+    all_files = list_all_files(base_url, base_url, sub_folder)
     return all_files
