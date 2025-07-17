@@ -232,6 +232,10 @@ def remove_unsubscribed_mods():
     if "subscribed_mods" not in config:
         return
 
+    # If subscribed_mods is empty, return
+    if not config["subscribed_mods"]:
+        return
+
     for sub in config["subscribed_mods"].values():
         mod_file = sub["file"]
 
@@ -740,6 +744,10 @@ if config["mod_pack_url"]:
 
             collections_url = f"{config['mod_pack_url']}/mods/_collections/"
             download_folder(collections_url, collections_path)
+
+            # Ensure the collections are in the config file
+            if "collections" not in config:
+                config["collections"] = {}
 
             # Create a list of collections to delete
             collections_to_delete = [
