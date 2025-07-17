@@ -1,6 +1,6 @@
 import requests
 
-from helpers.config import get_oauth_token, read_config, save_config, update_oauth_token
+from helpers.config import create_oauth_token, get_oauth_token, read_config, save_config
 
 MODIO_API_URL = "https://api.mod.io/v1"
 
@@ -26,7 +26,7 @@ def get_subscriptions():
         if response.status_code == 401:
             print("")
             print("Unauthorized access. Please update your OAuth token.")
-            update_oauth_token()
+            create_oauth_token()
             # Clear the screen
             print("\033[H\033[J")
             # Retry the request
@@ -76,7 +76,7 @@ def subscribe_to_mod(mod_id):
             print(
                 "Unauthorized access. Please update your token and make sure it has write access."
             )
-            update_oauth_token()
+            create_oauth_token()
             # Clear the screen
             print("\033[H\033[J")
             # Retry the request
@@ -121,7 +121,7 @@ def unsubscribe_from_mod(mod_id):
             print(
                 "Unauthorized access. Please update your token and make sure it has write access."
             )
-            update_oauth_token()
+            create_oauth_token()
             # Clear the screen
             print("\033[H\033[J")
             # Retry the request
