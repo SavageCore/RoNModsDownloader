@@ -968,9 +968,13 @@ while True:
     if choice == "1":
         print("\033[H\033[J")
         install_mods(mod_files, mods_dest_path, mods_down_path)
+        input("Press any key to continue...")
+        print("\033[H\033[J")
     elif choice == "2":
         print("\033[H\033[J")
         uninstall_mods(mods_dest_path, mods_down_path, game_path)
+        input("Press any key to continue...")
+        print("\033[H\033[J")
     elif choice == "3":
         print("\033[H\033[J")
         view_collections(collections)
