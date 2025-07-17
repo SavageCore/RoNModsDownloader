@@ -81,6 +81,10 @@ def subscribe_to_mod(mod_id):
             print("\033[H\033[J")
             # Retry the request
             return subscribe_to_mod(mod_id)
+        # 403 can happen when the mod is either "hidden" or there was a DMCA takedown request
+        # Just continue if this happens
+        elif response.status_code == 403:
+            return True
         else:
             print(f"HTTP error occurred: {http_err}")
     except Exception as err:
