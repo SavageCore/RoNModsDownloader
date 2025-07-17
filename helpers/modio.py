@@ -126,6 +126,9 @@ def unsubscribe_from_mod(mod_id):
             print("\033[H\033[J")
             # Retry the request
             return unsubscribe_from_mod(mod_id)
+        # If error 400, "The requested user is not currently subscribed to the requested mod." so we can return True
+        elif response.status_code == 400:
+            return True
         else:
             print(f"HTTP error occurred: {http_err}")
     except Exception as err:
