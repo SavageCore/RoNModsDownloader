@@ -1,11 +1,11 @@
 vdf==3.4
-requests==2.32.4
+requests==2.32.5
 tqdm==4.67.1
 pyinstaller==6.16.0
 black===25.1.0
 semver===3.0.4
-psutil===7.0.0
+psutil===7.1.0
 windows-curses===2.4.1
 packaging==25.0
-beautifulsoup4==4.13.4
-seleniumbase==4.40.6
+beautifulsoup4==4.13.5
+seleniumbase==4.41.6
